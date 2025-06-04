@@ -1,0 +1,39 @@
+name = "mideapage_TypsScript" # 给你的 Worker 起一个独一无二的名字
+main = "src/index.ts"           # Worker 的入口脚本 (见第3步)
+compatibility_date = "2025-06-04" # 使用一个较新的日期
+account_id = "1e1f534910c36b2304b1e4fdca78a03b"
+
+
+
+
+
+
+# --- D1 数据库绑定 ---
+# 你需要先在 Cloudflare 控制面板创建这些 D1 数据库
+[[d1_databases]]
+binding = "DB_MOVIES"  
+database_name = "movies_database_d1"
+database_id = "1a6374b8-39fa-4a5d-9749-f9c3bdbaf108" # 从 Cloudflare 控制面板获取
+
+[[d1_databases]]
+binding = "DB_MANGA"
+database_name = "manga_date_d1"
+database_id = "4eb7182f-7cea-420e-903a-f336cf95f6c2"
+
+# --- R2 存储桶绑定 (用于图片、静态CSS/JS等) ---
+# 你需要先在 Cloudflare 控制面板创建这个 R2 存储桶
+[[r2_buckets]]
+binding = "ASSETS_BUCKET" # 在 Python 代码中如何访问：env.ASSETS_BUCKET
+bucket_name = "manga"
+
+[[r2_buckets]]
+binding = "MOVIES_BUCKET" # 在 Worker 代码中访问的绑定名称
+bucket_name = "movies"    # R2 存储桶的实际名称
+# --- 环境变量 / 密钥 ---
+# 对于非敏感变量，可以在这里定义:
+[vars]
+
+
+# 静态资源 (static/下的CSS, JS)：最佳实践是上传到 R2。
+# 然后你的 FastAPI 应用生成指向 R2 的 URL，或者直接从 R2 获取并提供它们。
+# 另一种方案是将静态资源部署到 Cloudflare Pages，API 部署到 Workers。
