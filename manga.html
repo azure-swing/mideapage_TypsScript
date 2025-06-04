@@ -1,0 +1,1852 @@
+<!-- templatesreader.html -->
+<head>
+    <!-- ... (CSS bleibt gleich) ... -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的漫画阅读器</title>
+    <style>
+        /* === CSS Reset/Normalize (Optional but Recommended) === */
+        /* You might want to include a more comprehensive reset or normalize.css */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* === 全局和基础 === */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            margin: 0;
+            background-color: #f4f7f6; /* Slightly softer background */
+            color: #333;
+            line-height: 1.1;
+            overflow-x: hidden; /* Prevent horizontal scroll on view transitions */
+        }
+
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+            color: #0056b3;
+        }
+
+        button, select, input[type="search"], input[type="number"], input[type="text"] {
+            padding: 10px 15px; /* Slightly larger padding */
+            margin: 5px;
+            border: 1px solid #ced4da; /* Softer border */
+            border-radius: 4px;
+            font-size: 1rem; /* Use rem for better accessibility */
+            vertical-align: middle; /* Align form elements nicely */
+        }
+
+        button {
+            cursor: pointer;
+            background-color: #e9ecef; /* Lighter button default */
+            color: #495057;
+            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        button:hover {
+            background-color: #dee2e6;
+            border-color: #adb5bd;
+        }
+        button:active {
+            background-color: #ced4da;
+        }
+
+        /* Primary action button style */
+        button.primary-action {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        button.primary-action:hover {
+            background-color: #0069d9;
+            border-color: #0062cc;
+        }
+        button.primary-action:active {
+            background-color: #005cbf;
+        }
+
+        /* Danger action button style */
+        button.danger-action {
+            background-color: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+        button.danger-action:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+        button.favorite-btn.favorited,
+        #detail-favorite-btn.favorited {
+            background-color: #fdd;
+            color: #c00;
+            border-color: #fbb;
+        }
+        button.favorite-btn.favorited:hover,
+        #detail-favorite-btn.favorited:hover {
+            background-color: #fcc;
+        }
+        h1, h2, h3, h4 {
+            margin-top: 0.8em;
+            margin-bottom: 0.5em;
+            font-weight: 600; /* Titles are bold by default */
+        }
+        h1 { font-size: 2.2rem; }
+        h2 { font-size: 1.8rem; }
+        h3 { font-size: 1.4rem; }
+        h4 { font-size: 1.1rem; }
+
+        /* Style for segments within titles that should not be bold */
+        .title-segment-normal {
+            font-weight: 400;
+            font-size: 0.7rem											
+        }
+
+        ul { list-style: none; }
+
+        /* === 视图切换 === */
+        .view {
+            display: none;
+            width: 100%;
+            padding: 15px;
+        }
+        .view.active {
+            display: block;
+        }
+        .loading-text {
+            text-align: center;
+            padding: 25px;
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+
+        /* === 主页视图 (#home-view) === */
+        #home-view header {
+            background-color: #343a40;
+            color: white;
+            padding: 1.2em 1em;
+            text-align: center;
+            margin: -15px -15px 15px -15px;
+        }
+        #home-view header a#show-all-authors-link {
+            margin-left: 15px;
+            font-size: 0.85rem;
+            color: #adb5bd;
+        }
+        #home-view header a#show-all-authors-link:hover { color: #f8f9fa; }
+
+
+        #home-controls {
+            padding: 15px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        #search-input {
+            flex-grow: 1;
+            min-width: 200px;
+        }
+        #search-button { /* Uses .primary-action */ }
+        #sort-select { min-width: 180px; }
+
+        .main-content-area {
+            display: flex;
+            gap: 20px;
+            max-width: 100%;
+        }
+
+        #collections-panel {
+            width: 240px;
+            padding: 20px;
+            margin-right: 0;
+            border: 1px solid #dee2e6;
+            background-color: #ffffff;
+            border-radius: 5px;
+            align-self: flex-start;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        #collections-panel h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        #collections-list li a {
+            display: block;
+            padding: 10px 8px;
+            text-decoration: none;
+            color: #007bff;
+            border-radius: 3px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        #collections-list li a:hover,
+        #collections-list li a.active-collection {
+            background-color: #007bff;
+            color: white;
+        }
+        #create-collection-btn {
+            width: 100%;
+            background-color: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+        #create-collection-btn:hover { background-color: #218838; border-color: #1e7e34;}
+
+        #manga-grid-container {
+            flex-grow: 1;
+        }
+        .manga-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .manga-card {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+        }
+        .manga-card.manga-card-is-favorited {
+            border-left: 4px solid #dc3545;
+            background-color: #fff8f8;
+        }
+        .manga-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .manga-cover {
+            width: 100%;
+            height: 310px;
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .placeholder-cover { /* ... (保持) ... */ }
+
+        .manga-card-content {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .manga-title { /* This is usually an h3, so it's already bold */
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            color: #212529;
+            line-height: 1.3;
+												margin-top: 0;
+        }
+        .manga-author-pages-container {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        .manga-author-pages-container .manga-author,
+        .manga-author-pages-container .manga-pages {
+            display: block;
+        }
+        .manga-author-pages-container .manga-author a.author-spa-link { color: #007bff; }
+        .manga-author-pages-container .manga-author a.author-spa-link:hover { color: #0056b3; }
+
+
+        .manga-card .action-buttons {
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 8px;
+        }
+        .manga-card .favorite-btn,
+        .manga-card .add-to-collection-btn {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .manga-card .read-button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* === 漫画详情页视图 (#manga-detail-view) === */
+        #manga-detail-view {
+            padding: 25px;
+            max-width: 960px;
+            margin: 25px auto;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        #back-to-home-from-detail-btn, #back-to-detail-or-home-btn {
+            margin-bottom: 20px;
+            background-color: #6c757d;
+            color: white;
+            border-color: #6c757d;
+        }
+        #back-to-home-from-detail-btn:hover, #back-to-detail-or-home-btn:hover {
+            background-color: #5a6268; border-color: #545b62;
+        }
+
+        #detail-manga-title { font-size: 2rem; color: #212529; } /* This is an h2, already bold */
+        .manga-meta-info p { color: #495057; margin-bottom: 5px; font-size: 1rem; }
+
+        .detail-cover-actions-wrapper {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 25px;
+            align-items: flex-start;
+        }
+        #detail-manga-cover {
+            flex-shrink: 0;
+            width: 250px;
+            height: auto;
+            max-height: 350px;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            object-fit: cover;
+        }
+        .detail-actions {
+            flex-grow: 1;
+        }
+        #detail-collections-management { margin-top: 15px; }
+        #detail-collections-management label { display: block; margin-bottom: 5px; font-weight: 500; }
+        #detail-collections-management select#detail-add-to-collection-select {
+            width: calc(100% - 120px);
+            margin-right: 10px;
+        }
+        #detail-collections-management button#detail-confirm-add-to-collection-btn { width: 110px; }
+
+        #detail-current-collections-for-manga { margin-top: 15px; }
+        #detail-current-collections-for-manga p strong { font-weight: 600; }
+        #detail-manga-current-collections-list li {
+            display: inline-block;
+            background-color: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 15px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        #detail-manga-current-collections-list li button.remove-from-col-btn {
+            margin-left: 5px; background: none; border: none; color: #dc3545; font-weight: bold; cursor: pointer; padding:0;
+        }
+
+
+        #detail-preview-images-container h3,
+        #detail-appendices-list-container h4 { /* Geändert, um h4 für Anhänge zu verwenden */
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        #detail-preview-images {
+            display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;
+        }
+        #detail-preview-images img {
+            width: 120px;
+            height: 180px;
+            object-fit: cover;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        #detail-preview-images img:hover { transform: scale(1.05); }
+
+        #detail-expand-all-preview-btn { margin-bottom: 15px; }
+        #detail-start-reading-btn { margin-right: 10px; }
+
+        /* Styles für Appendix-Liste */
+        #detail-appendices-list ul {
+            list-style: none;
+            padding: 0;
+            display: grid; /* Oder flex für eine einzelne Reihe */
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Mehrspaltig für Anhänge */
+            gap: 15px;
+        }
+        #detail-appendices-list ul li {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+        }
+        #detail-appendices-list ul li img.appendix-cover {
+            width: 100%;
+            max-width: 120px; /* Begrenzt die Breite des Covers */
+            height: auto; /* Höhe automatisch anpassen */
+            max-height: 180px; /* Maximale Höhe für das Cover */
+            object-fit: cover;
+            border-radius: 3px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        #detail-appendices-list ul li a.appendix-title-link {
+            font-size: 0.95rem;
+            display: block;
+            color: #007bff;
+            text-decoration: none;
+        }
+        #detail-appendices-list ul li a.appendix-title-link:hover {
+            text-decoration: underline;
+        }
+        #detail-appendices-list ul li .appendix-page-count {
+            font-size: 0.8rem;
+            color: #6c757d;
+            display: block;
+            margin-top: 4px;
+        }
+
+
+        /* === 阅读器视图 (#reader-view-container) === */
+        #reader-view-container {
+             padding: 0;
+             height: 100vh;
+             flex-direction: column;
+        }
+        #reader-view-container.active {
+            display: flex;
+        }
+
+		.reader-controls {
+			background-color: rgba(0,0,0,0.85);
+			color: white;
+			padding: 8px 15px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			flex-wrap: wrap;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			z-index: 1001;
+			opacity: 1;
+			transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+			transform: translateY(0);
+		}
+        /* Reader title indicator is a span, so it won't inherit h1-h4 boldness */
+        /* We can make it bold, and then .title-segment-normal will override parts of it */
+        #reader-manga-title-indicator {
+            font-weight: 600; /* Make the base reader title indicator bold */
+        }
+
+		.reader-controls.hidden-controls {
+			opacity: 0;
+			pointer-events: none;
+			transform: translateY(-100%);
+		}
+        .reader-controls.controls-manually-hidden {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateY(-100%) !important;
+        }
+
+
+		#actual-reader-view {
+			padding-top: 60px;
+            background-color: #1a1a1a;
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+		}
+        .reader-controls button, .reader-controls select {
+            background-color: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+        }
+        .reader-controls button:hover, .reader-controls select:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+        .reader-controls input[type="number"] {
+            background-color: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            width: 50px;
+        }
+        .reader-controls .back-button-spa {
+            background-color: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 15px;
+        }
+         .reader-controls .back-button-spa:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+        #reader-toggle-controls-btn {
+            font-size: 0.8em;
+            padding: 6px 10px;
+        }
+
+
+        .reader-view-mode {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+        .reader-view-mode.active {
+            display: flex;
+        }
+
+        #double-page-reader-view.active {
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             gap: 5px;
+        }
+        .page-image-container {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .page-image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: 0 0 15px rgba(0,0,0,0.7);
+            background-color: #000;
+            opacity: 1;
+            transition: opacity 0.25s ease-in-out;
+        }
+		.page-image-container img.img-fade-out,
+		.page-image-container img.img-fade-in-setup {
+			opacity: 0;
+		}
+
+        #double-page-reader-view.single-mode-active .left-page-container {
+            width: 100%;
+            flex-grow: 1;
+        }
+        #double-page-reader-view.single-mode-active .right-page-container {
+            display: none;
+        }
+
+
+        #scroll-reader-view.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+        }
+        #scroll-reader-view img {
+            max-width: 95%;
+            height: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+        }
+        .reader-loading-indicator { color: #ccc; text-align: center; width: 100%; padding: 20px; }
+
+
+        /* === 模态框 (Modal) === */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center; justify-content: center; z-index: 1000;
+            padding: 20px;
+        }
+        .modal-content {
+            background-color: white; padding: 25px; border-radius: 8px;
+            min-width: 320px; max-width: 500px;
+            width: 90%;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-content h4 { margin-top: 0; font-size: 1.5rem; margin-bottom: 15px; } /* This is h4, already bold */
+        .modal-content ul#modal-collections-list {
+            list-style: none; padding: 0; max-height: 250px; overflow-y: auto;
+            margin-bottom: 20px; border: 1px solid #eee; border-radius: 4px;
+        }
+        .modal-content ul#modal-collections-list li {
+            padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f5f5f5;
+        }
+        .modal-content ul#modal-collections-list li:last-child { border-bottom: none; }
+        .modal-content ul#modal-collections-list li:hover { background-color: #f0f8ff; }
+        .modal-content p a#modal-create-new-collection-link { font-weight: 500; }
+        .modal-close-btn {
+            float: right; font-size: 1.8rem; line-height: 1;
+            border: none; background: none; cursor: pointer;
+            color: #aaa; padding: 0; margin: -10px -10px 0 0;
+        }
+        .modal-close-btn:hover { color: #777; }
+
+
+        #pagination-controls input[type="number"] {
+            width: 60px;
+            padding: 8px;
+            margin: 0 5px;
+            text-align: center;
+        }
+        #pagination-controls button.goto-page-btn {
+            padding: 8px 12px;
+        }
+
+        /* === 移动端适配 (Mobile Responsiveness) === */
+								@media (max-width: 768px) {
+												h1 {
+																font-size: 1.6rem; /* 你已有的 */
+																line-height: 0.9;  /* 新增或修改：缩小行高，例如 1.2 或 1.3 */
+																margin-bottom: 0.3em; /* 可选：同时缩小标题下的间距 */
+												}
+												h2 {
+																font-size: 1.4rem; /* 你已有的 */
+																line-height: 1; /* 新增或修改：缩小行高 */
+																margin-bottom: 0.25em;/* 可选 */
+												}
+												h3 {
+																font-size: 1.2rem; /* 你已有的 */
+																line-height: 1.3;  /* 新增或修改：缩小行高 */
+																margin-bottom: 0.2em; /* 可选 */
+												}
+												h4 {
+																font-size: 1rem;   /* 你已有的 */
+																line-height: 1.35; /* 新增或修改：缩小行高 */
+																margin-bottom: 0.15em;/* 可选 */
+												}
+
+            #home-title { font-size: 1.6rem; } /* This is h1, already bold */
+
+            button, select, input[type="search"], input[type="number"], input[type="text"] {
+                padding: 8px 12px;
+                font-size: 0.95rem;
+            }
+
+            .view { padding: 10px; }
+
+            #home-view header { padding: 1em 0.5em; }
+            #home-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            #home-controls > * {
+                width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+            }
+            .main-content-area {
+                flex-direction: column;
+            }
+            #collections-panel {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 15px;
+                padding: 15px;
+            }
+            .manga-grid {
+                grid-template-columns: repeat(auto-fill, minmax(calc(33.333% - 14px), 1fr));
+                gap: 10px;
+            }
+            .manga-cover { height: 150px; }
+
+            .manga-card .manga-title { /* This is h3, already bold */
+                font-size: 0.85rem;
+                line-height: 1.25;
+                height: 2.5em;
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                text-overflow: ellipsis;
+                margin-bottom: 4px;
+            }
+            .manga-card .manga-author-pages-container {
+                font-size: 0.7rem;
+                line-height: 1.3;
+            }
+
+            .manga-card .action-buttons {
+                display: none;
+            }
+
+            #manga-detail-view { padding: 15px; margin: 15px auto; }
+            .detail-cover-actions-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+            #detail-manga-cover {
+                width: 80%;
+                max-width: 280px;
+                margin-bottom: 15px;
+            }
+            #detail-collections-management select#detail-add-to-collection-select {
+                width: calc(100% - 105px);
+            }
+            #detail-collections-management button#detail-confirm-add-to-collection-btn {
+                width: 100px;
+            }
+            #detail-preview-images img {
+                width: 80px;
+                height: 120px;
+            }
+             /* Mobile Appendix Styles */
+            #detail-appendices-list ul {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                gap: 10px;
+            }
+            #detail-appendices-list ul li img.appendix-cover {
+                max-width: 100px;
+                max-height: 150px;
+            }
+
+
+            .reader-controls {
+                padding: 5px;
+                gap: 5px;
+            }
+            .reader-controls button, .reader-controls select, .reader-controls input[type="number"], .reader-controls label {
+                padding: 6px 8px;
+                font-size: 0.85rem;
+                margin: 2px;
+            }
+            .reader-controls #reader-preload-count { width: 35px !important; }
+            .reader-controls #reader-manga-title-indicator, /* Already has font-weight:600 from base style */
+            .reader-controls #reader-page-indicator,
+            .reader-controls #reader-total-pages-indicator {
+                font-size: 0.8rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 80px;
+            }
+            #reader-toggle-controls-btn {
+                order: 10;
+                margin-left: auto;
+            }
+
+            #actual-reader-view {
+                padding-top: 50px;
+            }
+            #scroll-reader-view img {
+                max-width: 100%;
+            }
+
+            .modal-content { padding: 20px; }
+            .modal-content h4 { font-size: 1.3rem; } /* This is h4, already bold */
+
+            #pagination-controls {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 5px;
+            }
+            #pagination-controls button, #pagination-controls span {
+                padding: 6px 10px;
+                font-size: 0.9rem;
+            }
+            #pagination-controls input[type="number"] {
+                width: 50px;
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <!-- HTML REMAINS THE SAME -->
+        <!-- ======================= 主页视图 (Home View) ======================= -->
+        <div id="home-view" class="view">
+            <header>
+                <h1 id="home-title">我的漫画库</h1>
+            </header>
+            <div id="home-controls">
+                <input type="search" id="search-input" placeholder="搜索漫画标题或作者...">
+                <button id="search-button">搜索</button>
+                <select id="sort-select">
+                    <option value="title_asc">标题 (A-Z)</option>
+                    <option value="title_desc">标题 (Z-A)</option>
+                    <option value="id_desc">最新添加</option>
+                    <option value="id_asc">最早添加</option>
+                    <option value="page_count_desc">页数 (多到少)</option>
+                    <option value="page_count_asc">页数 (少到多)</option>
+                </select>
+            </div>
+            <div class="main-content-area">
+                <aside id="collections-panel">
+                    <h3>收藏夹</h3>
+                    <ul id="collections-list">
+                        <li><p class="loading-text" style="font-size:0.9em; padding:5px;">加载中...</p></li>
+                    </ul>
+                    <button id="create-collection-btn">新建收藏夹</button>
+                </aside>
+                <main id="manga-grid-container" class="manga-grid">
+                    <p class="loading-text">正在加载漫画列表...</p>
+                </main>
+            </div>
+			<div id="pagination-controls" style="text-align: center; margin-top: 20px;">
+			</div>
+        </div>
+
+        <!-- =================== 漫画详情页视图 (Manga Detail View) =================== -->
+        <div id="manga-detail-view" class="view">
+            <button id="back-to-home-from-detail-btn">« 返回列表</button>
+            <article class="manga-detail-content">
+                <h2 id="detail-manga-title">漫画标题加载中...</h2>
+                <div class="manga-meta-info">
+                    <p>作者: <span id="detail-manga-author">未知</span></p>
+                    <p>页数: <span id="detail-manga-page-count">0</span></p>
+                </div>
+                <div class="detail-cover-actions-wrapper">
+                    <img id="detail-manga-cover" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="封面加载中...">
+                    <div class="detail-actions">
+                        <button id="detail-favorite-btn" data-item-id="" data-favorited="false">🤍 标为喜欢</button>
+                        <div id="detail-collections-management">
+                            <label for="detail-add-to-collection-select">添加到收藏夹:</label>
+                            <select id="detail-add-to-collection-select">
+                                <option value="">选择收藏夹...</option>
+                            </select>
+                            <button id="detail-confirm-add-to-collection-btn">确认添加</button>
+                            <div id="detail-current-collections-for-manga">
+                                <p><strong>当前所属收藏夹:</strong></p>
+                                <ul id="detail-manga-current-collections-list">
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>预览 (前20页):</h3>
+                <div id="detail-preview-images" class="preview-images">
+                    <p class="loading-text" style="font-size:0.9em; padding:5px;">加载预览中...</p>
+                </div>
+                <button id="detail-expand-all-preview-btn" style="display:none;">展开全部预览</button>
+
+                <button id="detail-start-reading-btn" class="primary-action" data-item-id="">开始阅读</button>
+
+                <!-- NEU: Bereich für Anhänge -->
+                <div id="detail-appendices-list-container" style="margin-top: 25px;">
+                    <h4>附录:</h4>
+                    <ul id="detail-appendices-list">
+                        <!-- Hier werden die Anhänge dynamisch eingefügt -->
+                    </ul>
+                </div>
+            </article>
+        </div>
+
+        <!-- ===================== 阅读器视图 (Reader View) ===================== -->
+        <div id="reader-view-container" class="view">
+            <div class="reader-controls">
+                <button id="back-to-home-btn" class="back-button-spa">« 返回</button> <!-- Dieser Button wird angepasst -->
+                <span id="reader-manga-title-indicator">漫画标题</span> -
+                <span id="reader-page-indicator">页码</span> /
+                <span id="reader-total-pages-indicator">总页数</span>
+                <select id="reader-mode-select">
+                    <option value="double">双页模式</option>
+                    <option value="single">单页模式</option>
+                    <option value="scroll">滑动模式</option>
+                </select>
+                <button id="reader-prev-page-btn" class="nav-button">上一页</button>
+                <button id="reader-next-page-btn" class="nav-button">下一页</button>
+                <button id="reader-odd-even-align-btn" title="切换奇数页在左/右 (双页模式)">对齐</button>
+                <label>
+                    预加载: <input type="number" id="reader-preload-count" value="3" min="1" max="10" style="width: 40px;">
+                </label>
+                <button id="reader-toggle-controls-btn">隐藏工具栏</button>
+            </div>
+            <div id="actual-reader-view">
+                <div id="double-page-reader-view" class="reader-view-mode">
+                    <div class="page-image-container left-page-container">
+                        <img id="reader-left-page-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="左页">
+                    </div>
+                    <div class="page-image-container right-page-container">
+                        <img id="reader-right-page-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="右页">
+                    </div>
+                </div>
+                <div id="scroll-reader-view" class="reader-view-mode">
+                </div>
+                <div id="reader-loading-text" class="reader-loading-indicator" style="display:none;">加载中...</div>
+            </div>
+        </div>
+
+        <!-- ===================== 模态框 (Modal) ===================== -->
+        <div id="add-to-collection-modal" class="modal-overlay" style="display:none;">
+            <div class="modal-content">
+                <button class="modal-close-btn" id="close-add-to-collection-modal">×</button>
+                <h4>添加到收藏夹</h4>
+                <ul id="modal-collections-list">
+                    <li><p class="loading-text" style="font-size:0.9em; padding:5px;">加载收藏夹...</p></li>
+                </ul>
+                <p>或 <a href="#" id="modal-create-new-collection-link">创建新收藏夹</a></p>
+            </div>
+        </div>
+    </div>
+    <script>
+        const initialFlaskData = {{ initial_data | tojson }};
+
+        function isMobileDevice() {
+            return (typeof window.orientation !== "undefined") ||
+                   (navigator.userAgent.indexOf('IEMobile') !== -1) ||
+                   (window.innerWidth <= 768);
+        }
+
+        // Helper function to format titles for mobile display (removes bracketed content)
+        function formatTitleForMobile(title) {
+            if (!title) return '';
+            return title.replace(/\s*\(.*?\)\s*|\s*\[.*?\]\s*/g, ' ').replace(/\s\s+/g, ' ').trim();
+        }
+
+        // Helper function to format titles with non-bold segments for () and []
+        function formatTitleWithNonBoldSegments(titleText) {
+            if (!titleText) return '';
+            return titleText.replace(/(\(.*?\)|\[.*?\])/g, '<span class="title-segment-normal">$1</span>');
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const homeView = document.getElementById('home-view'), homeTitle = document.getElementById('home-title'), mangaGridContainer = document.getElementById('manga-grid-container');
+            const readerViewContainer = document.getElementById('reader-view-container'), backToHomeBtn = document.getElementById('back-to-home-btn'), readerMangaTitleIndicator = document.getElementById('reader-manga-title-indicator'), readerPageIndicator = document.getElementById('reader-page-indicator'), readerTotalPagesIndicator = document.getElementById('reader-total-pages-indicator'), readerModeSelect = document.getElementById('reader-mode-select'), readerPrevBtn = document.getElementById('reader-prev-page-btn'), readerNextBtn = document.getElementById('reader-next-page-btn'), readerOddEvenAlignBtn = document.getElementById('reader-odd-even-align-btn'), readerPreloadCountInput = document.getElementById('reader-preload-count'), actualReaderView = document.getElementById('actual-reader-view'), doublePageReaderView = document.getElementById('double-page-reader-view'), scrollReaderView = document.getElementById('scroll-reader-view'), readerLeftPageImg = document.getElementById('reader-left-page-img'), readerRightPageImg = document.getElementById('reader-right-page-img'), readerLoadingText = document.getElementById('reader-loading-text'), readerToggleControlsBtn = document.getElementById('reader-toggle-controls-btn');
+            const addToCollectionModal = document.getElementById('add-to-collection-modal'), modalCollectionsList = document.getElementById('modal-collections-list'), modalCreateNewCollectionLink = document.getElementById('modal-create-new-collection-link'), closeModalBtn = document.getElementById('close-add-to-collection-modal'), collectionsListElement = document.getElementById('collections-list');
+            const mangaDetailView = document.getElementById('manga-detail-view'), backToHomeFromDetailBtn = document.getElementById('back-to-home-from-detail-btn'), detailMangaTitle = document.getElementById('detail-manga-title'), detailMangaAuthor = document.getElementById('detail-manga-author'), detailMangaPageCount = document.getElementById('detail-manga-page-count'), detailMangaCover = document.getElementById('detail-manga-cover'), detailFavoriteBtn = document.getElementById('detail-favorite-btn'), detailAddToCollectionSelect = document.getElementById('detail-add-to-collection-select'), detailConfirmAddToCollectionBtn = document.getElementById('detail-confirm-add-to-collection-btn'), detailPreviewImagesContainer = document.getElementById('detail-preview-images'), detailExpandAllPreviewBtn = document.getElementById('detail-expand-all-preview-btn'), detailStartReadingBtn = document.getElementById('detail-start-reading-btn');
+            const detailAppendicesListContainer = document.getElementById('detail-appendices-list-container'); // Container für die Liste
+            const detailAppendicesList = document.getElementById('detail-appendices-list'); // Die UL-Liste selbst
+
+            let appState = { currentView: 'home', currentMangaDetailData: null, homeViewData: { mangas: [], filters: { searchTerm: '', sortBy: 'title_asc', collectionId: null, activeAuthor: null, }, isLoading: false, currentPage: 1, itemsPerPage: isMobileDevice() ? 20 : 40, totalMangas: 0, totalPages: 0 }, collections: [], readerState: { mangaData: null, currentPageIndex: 0, currentMode: 'double', oddEvenOffset: 0, isLoading: false }, currentMangaIdForModal: null };
+
+			function handleRouteChange() {
+				const path = window.location.pathname;
+				const params = new URLSearchParams(window.location.search);
+				document.querySelectorAll('.view.active').forEach(v => v.classList.remove('active'));
+
+				if (path.startsWith('/read/')) {
+					const itemId = parseInt(path.split('/').pop(), 10);
+					let startImageIndex = parseInt(params.get('page'), 10) || 0;
+                    if (initialFlaskData && initialFlaskData.requested_page !== undefined && itemId === initialFlaskData.requested_item_id) {
+                         startImageIndex = parseInt(initialFlaskData.requested_page, 10) || 0;
+                    }
+					if (itemId) loadReaderView(itemId, Math.max(0, startImageIndex));
+					else navigateToPath('/');
+				} else if (path.startsWith('/manga/')) {
+					const itemId = parseInt(path.split('/').pop(), 10);
+					if (itemId) loadMangaDetailView(itemId);
+					else navigateToPath('/');
+				} else if (path.startsWith('/author/')) {
+					const author = decodeURIComponent(path.split('/').pop());
+					appState.homeViewData.filters.searchTerm = '';
+					appState.homeViewData.filters.collectionId = null;
+					appState.homeViewData.currentPage = 1;
+					loadHomeView(author);
+				}
+				else {
+					appState.homeViewData.filters.searchTerm = '';
+					appState.homeViewData.filters.collectionId = null;
+					appState.homeViewData.currentPage = 1;
+					loadHomeView(null, 1);
+				}
+			}
+
+            function navigateToPath(path, replace = false) {
+                if (replace) window.history.replaceState({}, '', path);
+                else window.history.pushState({}, '', path);
+                handleRouteChange();
+            }
+
+			function showView(viewName) {
+				document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+				let viewIdToActivate = (viewName === 'reader') ? 'reader-view-container' : `${viewName}-view`;
+				const viewElement = document.getElementById(viewIdToActivate);
+				if (viewElement) viewElement.classList.add('active');
+                else console.warn(`View element for ID "${viewIdToActivate}" not found.`);
+
+				if (viewName === 'reader') {
+                    if (readerControls) readerControls.classList.remove('controls-manually-hidden');
+                    if (readerToggleControlsBtn) readerToggleControlsBtn.textContent = '隐藏工具栏';
+					showReaderControls();
+				} else {
+					clearTimeout(controlsHideTimeout);
+					if (readerControls) {
+						readerControls.classList.remove('hidden-controls', 'controls-manually-hidden');
+					}
+                    if (readerToggleControlsBtn) readerToggleControlsBtn.textContent = '隐藏工具栏';
+					exitFullscreen();
+				}
+				appState.currentView = viewName;
+				window.scrollTo(0,0);
+			}
+
+            async function loadHomeView(authorFilterFromUrl = null) {
+                showView('home');
+                mangaGridContainer.innerHTML = '<p class="loading-text">正在加载...</p>';
+                appState.homeViewData.itemsPerPage = isMobileDevice() ? 20 : 40;
+                const currentFilters = appState.homeViewData.filters;
+                document.getElementById('search-input').value = currentFilters.searchTerm;
+                document.getElementById('sort-select').value = currentFilters.sortBy;
+                renderCollectionsList();
+
+                let baseTitle = "我的漫画库";
+                let apiUrl = '/api/mangas?';
+                const params = new URLSearchParams({
+                    page: appState.homeViewData.currentPage,
+                    per_page: appState.homeViewData.itemsPerPage
+                });
+
+				if (authorFilterFromUrl) {
+                    params.append('author', authorFilterFromUrl);
+                    baseTitle = `漫画库 - 作者: ${authorFilterFromUrl}`;
+                } else {
+                    if (currentFilters.searchTerm) params.append('search_term', currentFilters.searchTerm);
+                    if (currentFilters.sortBy) params.append('sort_by', currentFilters.sortBy);
+                    if (currentFilters.collectionId) {
+                        params.append('collection_id', currentFilters.collectionId);
+                        const selectedCollection = appState.collections.find(c => c.id === parseInt(currentFilters.collectionId));
+                        baseTitle = selectedCollection ? `收藏夹: ${selectedCollection.name}` : "我的漫画库";
+                    }
+                }
+
+                let mainTitleHtml;
+                if (isMobileDevice()) {
+                    mainTitleHtml = formatTitleForMobile(baseTitle);
+                    homeTitle.textContent = mainTitleHtml; 
+                } else {
+                    mainTitleHtml = formatTitleWithNonBoldSegments(baseTitle);
+                    homeTitle.innerHTML = mainTitleHtml; 
+                }
+
+
+                if (authorFilterFromUrl || currentFilters.collectionId) {
+                    homeTitle.innerHTML += ` <a href="#" id="show-all-authors-link"><span class="title-segment-normal">(显示全部/返回主列表)</span></a>`;
+                    document.getElementById('show-all-authors-link')?.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        appState.homeViewData.filters.searchTerm = '';
+                        appState.homeViewData.filters.collectionId = null;
+                        navigateToPath('/');
+                    });
+                }
+				apiUrl += params.toString();
+				try {
+					const data = await (await fetch(apiUrl)).json();
+                    if (!data || !data.mangas) throw new Error("Invalid data structure from API");
+					appState.homeViewData.mangas = data.mangas;
+					appState.homeViewData.totalMangas = data.total_mangas;
+					appState.homeViewData.totalPages = Math.ceil(data.total_mangas / appState.homeViewData.itemsPerPage);
+					renderMangaGrid();
+					renderPaginationControls();
+				} catch (error) {
+					console.error("Error loading home view mangas:", error);
+					mangaGridContainer.innerHTML = '<p class="loading-text">加载漫画失败。</p>';
+				}
+			}
+
+			function renderPaginationControls() {
+				const paginationContainer = document.getElementById('pagination-controls');
+				paginationContainer.innerHTML = '';
+				const { currentPage, totalPages } = appState.homeViewData;
+				if (totalPages <= 1) return;
+
+                function createPageButton(text, pageNum, isDisabled = false, isCurrent = false) {
+                    const button = document.createElement('button');
+                    button.textContent = text;
+                    if (pageNum) button.onclick = () => { appState.homeViewData.currentPage = pageNum; loadHomeView(); };
+                    if (isDisabled) button.disabled = true;
+                    if (isCurrent) button.style.fontWeight = 'bold';
+                    return button;
+                }
+                function createEllipsis() {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = ' ... ';
+                    return ellipsis;
+                }
+
+				if (currentPage > 1) paginationContainer.appendChild(createPageButton('« 上一页', currentPage - 1));
+
+                const pageRange = 2; 
+                let pagesToShow = [];
+                if (totalPages <= (pageRange * 2) + 1) { 
+                    for (let i = 1; i <= totalPages; i++) pagesToShow.push(i);
+                } else {
+                    pagesToShow.push(1); 
+                    if (currentPage > pageRange + 2) pagesToShow.push('...'); 
+
+                    for (let i = Math.max(2, currentPage - pageRange); i <= Math.min(totalPages - 1, currentPage + pageRange); i++) {
+                        pagesToShow.push(i);
+                    }
+
+                    if (currentPage < totalPages - (pageRange + 1)) pagesToShow.push('...'); 
+                    pagesToShow.push(totalPages); 
+                }
+                pagesToShow = [...new Set(pagesToShow)];
+
+                pagesToShow.forEach(p => {
+                    if (p === '...') paginationContainer.appendChild(createEllipsis());
+                    else paginationContainer.appendChild(createPageButton(p, p, p === currentPage, p === currentPage));
+                });
+
+				if (currentPage < totalPages) paginationContainer.appendChild(createPageButton('下一页 »', currentPage + 1));
+
+				if (totalPages > 1 && !isMobileDevice()) {
+					const pageInputLabel = document.createElement('span');
+					pageInputLabel.textContent = ' 跳转到: ';
+					pageInputLabel.style.marginLeft = "15px";
+					paginationContainer.appendChild(pageInputLabel);
+					const pageInput = document.createElement('input');
+					pageInput.type = 'number'; pageInput.min = '1'; pageInput.max = totalPages.toString(); pageInput.value = currentPage.toString();
+					const gotoButton = document.createElement('button');
+					gotoButton.textContent = '跳转'; gotoButton.classList.add('goto-page-btn');
+					const handleGoToPage = () => {
+						const targetPage = parseInt(pageInput.value, 10);
+						if (!isNaN(targetPage) && targetPage >= 1 && targetPage <= totalPages && targetPage !== appState.homeViewData.currentPage) {
+							appState.homeViewData.currentPage = targetPage; loadHomeView();
+						} else if (isNaN(targetPage) || targetPage < 1 || targetPage > totalPages) {
+							alert(`请输入1到${totalPages}之间的有效页码。`); pageInput.value = appState.homeViewData.currentPage;
+						}
+					};
+					pageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleGoToPage(); } });
+					gotoButton.addEventListener('click', handleGoToPage);
+					paginationContainer.appendChild(pageInput); paginationContainer.appendChild(gotoButton);
+				}
+			}
+
+            function renderMangaGrid() {
+                mangaGridContainer.innerHTML = '';
+                if (appState.homeViewData.mangas.length === 0) {
+                    mangaGridContainer.innerHTML = '<p class="loading-text">没有找到漫画。</p>'; return;
+                }
+                appState.homeViewData.mangas.forEach(manga => mangaGridContainer.appendChild(renderMangaCard(manga)));
+            }
+
+            function renderMangaCard(manga) {
+                const card = document.createElement('div');
+                card.className = 'manga-card';
+                if (manga.is_favorited) card.classList.add('manga-card-is-favorited');
+
+                let titleContent;
+                const originalMangaTitle = manga.title || "无标题";
+                if (isMobileDevice()) {
+                    titleContent = formatTitleForMobile(originalMangaTitle);
+                } else {
+                    titleContent = formatTitleWithNonBoldSegments(originalMangaTitle);
+                }
+                const altText = formatTitleForMobile(originalMangaTitle) || originalMangaTitle;
+
+
+                card.innerHTML = `
+                    <img src="${manga.cover_image_url || ''}" alt="${altText} 封面" class="manga-cover spa-manga-detail-link" data-item-id="${manga.id}" onerror="this.onerror=null;this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';this.classList.add('placeholder-cover');">
+                    <div class="manga-card-content">
+                        <h3 class="manga-title">${titleContent}</h3>
+                        <div class="manga-author-pages-container">
+                            <span class="manga-author">作者: ${manga.author && manga.author !== "未知作者" ? `<a href="/author/${encodeURIComponent(manga.author)}" class="spa-link author-spa-link" data-author="${manga.author}">${manga.author}</a>` : (manga.author || "未知作者")}</span>
+                            <span class="manga-pages">页数: ${manga.page_count}</span>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="favorite-btn ${manga.is_favorited ? 'favorited' : ''}" data-item-id="${manga.id}" data-favorited="${manga.is_favorited || false}">${(manga.is_favorited || false) ? '❤️ 已收藏' : '🤍 收藏'}</button>
+                            <button class="add-to-collection-btn" data-item-id="${manga.id}">添加到收藏夹</button>
+                        </div>
+                    </div>`;
+                card.querySelectorAll('.spa-manga-detail-link').forEach(link => link.addEventListener('click', (e) => { e.preventDefault(); navigateToPath(`/manga/${manga.id}`); }));
+                card.querySelector('.author-spa-link')?.addEventListener('click', (e) => { e.preventDefault(); navigateToPath(`/author/${encodeURIComponent(e.target.dataset.author)}`); });
+                card.querySelector('.add-to-collection-btn').addEventListener('click', () => showAddToCollectionModal(manga.id));
+                card.querySelector('.favorite-btn')?.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const buttonElement = e.currentTarget;
+                    if (!buttonElement || !(buttonElement instanceof HTMLElement) || typeof buttonElement.dataset === 'undefined') {
+                        console.error("Card favorite: Event target or dataset is null/undefined/invalid.", e);
+                        alert("卡片收藏操作异常: 按钮状态异常。");
+                        return;
+                    }
+                    const itemId = buttonElement.dataset.itemId;
+                    if (!itemId) {
+                        console.error("Card favorite: Missing itemId.", buttonElement);
+                        alert("卡片收藏操作异常: 漫画ID缺失。");
+                        return;
+                    }
+                    let currentClientIsFavorited = buttonElement.dataset.favorited === 'true';
+                    let newDesiredServerState = !currentClientIsFavorited;
+                    const cardElement = buttonElement.closest('.manga-card');
+                    try {
+                        const response = await fetch(`/api/manga_item/${itemId}/favorite`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ favorited: newDesiredServerState })
+                        });
+                        const result = await response.json();
+                        if (!document.body.contains(buttonElement) ||
+                            typeof buttonElement.dataset === 'undefined' ||
+                            (cardElement && !document.body.contains(cardElement))) {
+                            console.error("Card favorite: buttonElement or cardElement became invalid/detached after await!", buttonElement, cardElement);
+                            if (response.ok && result && typeof result.is_favorited === 'boolean') {
+                                const serverConfirmedIsFavorited = result.is_favorited;
+                                const mangaInState = appState.homeViewData.mangas.find(m => m.id == itemId);
+                                if (mangaInState) mangaInState.is_favorited = serverConfirmedIsFavorited;
+                                if (appState.currentView === 'manga_detail' && appState.currentMangaDetailData?.id == itemId) {
+                                    appState.currentMangaDetailData.is_favorited = serverConfirmedIsFavorited;
+                                    if(detailFavoriteBtn && document.body.contains(detailFavoriteBtn) && detailFavoriteBtn.dataset.itemId == itemId) {
+                                        detailFavoriteBtn.dataset.favorited = String(serverConfirmedIsFavorited);
+                                        detailFavoriteBtn.innerHTML = serverConfirmedIsFavorited ? '❤️ 已喜欢' : '🤍 标为喜欢';
+                                        detailFavoriteBtn.classList.toggle('favorited', serverConfirmedIsFavorited);
+                                    }
+                                }
+                            }
+                            return;
+                        }
+                        if (response.ok && result && typeof result.is_favorited === 'boolean') {
+                            const serverConfirmedIsFavorited = result.is_favorited;
+                            buttonElement.dataset.favorited = String(serverConfirmedIsFavorited);
+                            buttonElement.innerHTML = serverConfirmedIsFavorited ? '❤️ 已收藏' : '🤍 收藏';
+                            buttonElement.classList.toggle('favorited', serverConfirmedIsFavorited);
+                            if (cardElement) cardElement.classList.toggle('manga-card-is-favorited', serverConfirmedIsFavorited);
+                            const mangaInState = appState.homeViewData.mangas.find(m => m.id == itemId);
+                            if (mangaInState) mangaInState.is_favorited = serverConfirmedIsFavorited;
+                            if (appState.currentView === 'manga_detail' && appState.currentMangaDetailData?.id == itemId) {
+                                appState.currentMangaDetailData.is_favorited = serverConfirmedIsFavorited;
+                                if(detailFavoriteBtn && document.body.contains(detailFavoriteBtn) && detailFavoriteBtn.dataset.itemId == itemId) {
+                                    detailFavoriteBtn.dataset.favorited = String(serverConfirmedIsFavorited);
+                                    detailFavoriteBtn.innerHTML = serverConfirmedIsFavorited ? '❤️ 已喜欢' : '🤍 标为喜欢';
+                                    detailFavoriteBtn.classList.toggle('favorited', serverConfirmedIsFavorited);
+                                }
+                            }
+                        } else {
+                            console.error(`Card favorite: Error updating status for item ${itemId}: HTTP Status ${response.status}`, result);
+                            alert(`卡片收藏更新失败: ${result.error || '未知错误 (服务器)'}`);
+                             if (response.ok && (!result || typeof result.is_favorited !== 'boolean')) {
+                                alert('服务器响应格式错误，未能确认喜欢状态。请刷新。');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Card favorite: Network or parsing error:', error);
+                        alert('卡片收藏操作异常：网络或服务器通讯问题。');
+                    }
+                });
+                return card;
+            }
+
+
+            async function loadMangaDetailView(itemId) {
+                showView('manga-detail');
+                appState.currentMangaDetailData = null;
+
+                if (isMobileDevice()){
+                    detailMangaTitle.textContent = formatTitleForMobile('漫画标题加载中...');
+                } else {
+                    detailMangaTitle.innerHTML = formatTitleWithNonBoldSegments('漫画标题加载中...');
+                }
+                detailMangaAuthor.textContent = '未知'; detailMangaPageCount.textContent = '0';
+                detailMangaCover.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; detailMangaCover.alt = '封面加载中...';
+                detailPreviewImagesContainer.innerHTML = '<p class="loading-text" style="font-size:0.9em; padding:5px;">加载预览中...</p>';
+                document.getElementById('detail-manga-current-collections-list').innerHTML = '';
+                detailAppendicesList.innerHTML = ''; // Anhänge-Liste leeren
+                detailAppendicesListContainer.style.display = 'none'; // Container standardmäßig ausblenden
+
+                try {
+                    const mangaData = await (await fetch(`/api/manga_item/${itemId}`)).json();
+                    if (mangaData.error) throw new Error(mangaData.error);
+                    appState.currentMangaDetailData = mangaData;
+
+                    const originalTitle = mangaData.title || '无标题';
+                    if (isMobileDevice()) {
+                        detailMangaTitle.textContent = formatTitleForMobile(originalTitle);
+                    } else {
+                        detailMangaTitle.innerHTML = formatTitleWithNonBoldSegments(originalTitle);
+                    }
+
+                    detailMangaAuthor.textContent = mangaData.author || '未知作者';
+                    detailMangaPageCount.textContent = mangaData.page_count || '0';
+                    detailMangaCover.src = mangaData.cover_image_url || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                    detailMangaCover.alt = (formatTitleForMobile(originalTitle) || originalTitle) + ' 封面';
+                    detailMangaCover.onerror = function() { this.onerror=null; this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; this.alt='封面加载失败'; };
+                    detailFavoriteBtn.dataset.itemId = mangaData.id;
+                    detailFavoriteBtn.dataset.favorited = String(mangaData.is_favorited || false);
+                    detailFavoriteBtn.innerHTML = (mangaData.is_favorited ? '❤️ 已喜欢' : '🤍 标为喜欢');
+					detailFavoriteBtn.classList.toggle('favorited', mangaData.is_favorited || false);
+                    detailAddToCollectionSelect.innerHTML = '<option value="">选择收藏夹...</option>';
+                    appState.collections.forEach(col => { const o = document.createElement('option'); o.value = col.id; o.textContent = col.name; detailAddToCollectionSelect.appendChild(o); });
+                    detailConfirmAddToCollectionBtn.dataset.mangaId = mangaData.id;
+                    renderCurrentMangaCollectionsOnDetail();
+                    renderDetailPreviewImages(mangaData.image_urls || [], 20);
+                    detailStartReadingBtn.dataset.itemId = mangaData.id;
+                    
+                    // Anhänge rendern
+                    if (mangaData.appendices && mangaData.appendices.length > 0) {
+                        detailAppendicesListContainer.style.display = 'block'; // Container einblenden
+                        mangaData.appendices.forEach(appendix => {
+                            const li = document.createElement('li');
+                            
+                            const coverImg = document.createElement('img');
+                            coverImg.src = appendix.cover_image_url || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+                            coverImg.alt = `${appendix.title} 封面`;
+                            coverImg.className = 'appendix-cover';
+                            coverImg.onerror = function() { this.onerror=null; this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; this.alt='封面加载失败'; };
+                            coverImg.addEventListener('click', () => navigateToPath(`/read/${appendix.id}`)); // Klick auf Cover startet Reader
+
+                            const titleLink = document.createElement('a');
+                            titleLink.href = `#`; // Verhindert Standard-Navigation, da wir SPA-Navigation verwenden
+                            titleLink.textContent = appendix.title;
+                            titleLink.className = 'appendix-title-link';
+                            titleLink.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                navigateToPath(`/read/${appendix.id}`);
+                            });
+
+                            const pageCountSpan = document.createElement('span');
+                            pageCountSpan.className = 'appendix-page-count';
+                            pageCountSpan.textContent = `(${appendix.page_count} 页)`;
+
+                            li.appendChild(coverImg);
+                            li.appendChild(titleLink);
+                            li.appendChild(pageCountSpan);
+                            detailAppendicesList.appendChild(li);
+                        });
+                    } else {
+                        detailAppendicesList.innerHTML = '<li>无附录信息。</li>';
+                        detailAppendicesListContainer.style.display = 'block'; // Trotzdem anzeigen, um "无附录信息" zu zeigen
+                    }
+
+                } catch (error) {
+                    console.error("Error loading manga detail:", error);
+                    if (isMobileDevice()) detailMangaTitle.textContent = formatTitleForMobile('加载漫画详情失败');
+                    else detailMangaTitle.innerHTML = formatTitleWithNonBoldSegments('加载漫画详情失败');
+                    detailPreviewImagesContainer.innerHTML = `<p class="loading-text" style="color:red;">加载预览失败: ${error.message}</p>`;
+                    detailAppendicesList.innerHTML = '<li>加载附录失败。</li>';
+                    detailAppendicesListContainer.style.display = 'block';
+                }
+            }
+
+            function renderDetailPreviewImages(imageUrls, limit) {
+                detailPreviewImagesContainer.innerHTML = '';
+                if (!imageUrls || imageUrls.length === 0) { detailPreviewImagesContainer.innerHTML = '<p>无预览图片。</p>'; detailExpandAllPreviewBtn.style.display = 'none'; return; }
+                const urlsToShow = imageUrls.slice(0, limit);
+                urlsToShow.forEach((url, index) => {
+                    const img = document.createElement('img'); img.src = url; img.alt = `预览 ${index + 1}`; img.loading = 'lazy'; img.dataset.pageIndex = index;
+                    img.addEventListener('click', () => { const mangaId = appState.currentMangaDetailData.id, pageIndex = parseInt(img.dataset.pageIndex, 10); if (mangaId !== undefined && !isNaN(pageIndex)) navigateToPath(`/read/${mangaId}?page=${pageIndex}`); });
+                    detailPreviewImagesContainer.appendChild(img);
+                });
+                detailExpandAllPreviewBtn.style.display = imageUrls.length > limit ? 'inline-block' : 'none';
+                if(imageUrls.length > limit) detailExpandAllPreviewBtn.textContent = `展开全部预览 (${imageUrls.length} 页)`;
+                detailExpandAllPreviewBtn.onclick = () => renderDetailPreviewImages(imageUrls, imageUrls.length);
+            }
+
+            if (backToHomeFromDetailBtn) backToHomeFromDetailBtn.addEventListener('click', () => navigateToPath('/'));
+            if (detailStartReadingBtn) detailStartReadingBtn.addEventListener('click', (e) => { const mangaId = e.target.dataset.itemId; if (mangaId) navigateToPath(`/read/${mangaId}`); });
+            if (detailFavoriteBtn) {
+                detailFavoriteBtn.addEventListener('click', async (e) => {
+                    const buttonElement = e.currentTarget;
+                    if (!buttonElement || !(buttonElement instanceof HTMLElement) || typeof buttonElement.dataset === 'undefined') {
+                        console.error("Detail favorite: Event target or dataset is null/undefined/invalid.", e);
+                        alert("操作异常: 按钮状态异常，请刷新页面重试。");
+                        return;
+                    }
+                    const itemId = buttonElement.dataset.itemId;
+                    if (!itemId) {
+                        console.error("Detail favorite: Missing itemId in dataset.", buttonElement);
+                        alert("操作异常: 漫画ID缺失。");
+                        return;
+                    }
+                    let currentClientIsFavorited = buttonElement.dataset.favorited === 'true';
+                    let newDesiredServerState = !currentClientIsFavorited;
+                    try {
+                        const response = await fetch(`/api/manga_item/${itemId}/favorite`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ favorited: newDesiredServerState })
+                        });
+                        const result = await response.json();
+                        if (!document.body.contains(buttonElement) || typeof buttonElement.dataset === 'undefined') {
+                            console.error("Detail favorite: buttonElement or its dataset became invalid/detached after await!", buttonElement);
+                            if (response.ok && result && typeof result.is_favorited === 'boolean') {
+                                const serverConfirmedIsFavorited = result.is_favorited;
+                                if (appState.currentMangaDetailData?.id == itemId) appState.currentMangaDetailData.is_favorited = serverConfirmedIsFavorited;
+                                const mangaInHomeList = appState.homeViewData.mangas.find(m => m.id == itemId);
+                                if (mangaInHomeList) mangaInHomeList.is_favorited = serverConfirmedIsFavorited;
+                                const cardFavBtn = mangaGridContainer.querySelector(`.manga-card .favorite-btn[data-item-id="${itemId}"]`);
+                                if (cardFavBtn && document.body.contains(cardFavBtn)) {
+                                   cardFavBtn.dataset.favorited = String(serverConfirmedIsFavorited);
+                                   cardFavBtn.innerHTML = serverConfirmedIsFavorited ? '❤️ 已收藏' : '🤍 收藏';
+                                   cardFavBtn.classList.toggle('favorited', serverConfirmedIsFavorited);
+                                   cardFavBtn.closest('.manga-card')?.classList.toggle('manga-card-is-favorited', serverConfirmedIsFavorited);
+                                }
+                            }
+                            return;
+                        }
+                        if (response.ok && result && typeof result.is_favorited === 'boolean') {
+                            const serverConfirmedIsFavorited = result.is_favorited;
+                            buttonElement.dataset.favorited = String(serverConfirmedIsFavorited);
+                            buttonElement.innerHTML = serverConfirmedIsFavorited ? '❤️ 已喜欢' : '🤍 标为喜欢';
+                            buttonElement.classList.toggle('favorited', serverConfirmedIsFavorited);
+                            if (appState.currentMangaDetailData?.id == itemId) appState.currentMangaDetailData.is_favorited = serverConfirmedIsFavorited;
+                            const mangaInHomeList = appState.homeViewData.mangas.find(m => m.id == itemId);
+                            if (mangaInHomeList) {
+                                mangaInHomeList.is_favorited = serverConfirmedIsFavorited;
+                                const cardFavBtn = mangaGridContainer.querySelector(`.manga-card .favorite-btn[data-item-id="${itemId}"]`);
+                                if (cardFavBtn && document.body.contains(cardFavBtn)) {
+                                   cardFavBtn.dataset.favorited = String(serverConfirmedIsFavorited);
+                                   cardFavBtn.innerHTML = serverConfirmedIsFavorited ? '❤️ 已收藏' : '🤍 收藏';
+                                   cardFavBtn.classList.toggle('favorited', serverConfirmedIsFavorited);
+                                   cardFavBtn.closest('.manga-card')?.classList.toggle('manga-card-is-favorited', serverConfirmedIsFavorited);
+                                }
+                            }
+                        } else {
+                            console.error(`Detail favorite: Error updating status for item ${itemId}: HTTP Status ${response.status}`, result);
+                            alert(`更新喜欢状态失败: ${result.error || '未知错误 (服务器)'}`);
+                            if (response.ok && (!result || typeof result.is_favorited !== 'boolean')) {
+                                alert('服务器响应格式错误，未能确认喜欢状态。请刷新。');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Detail favorite: Network or parsing error:', error);
+                        alert('操作异常：网络或服务器通讯问题。');
+                    }
+                });
+            }
+            if (detailConfirmAddToCollectionBtn) {
+                detailConfirmAddToCollectionBtn.addEventListener('click', async (e) => {
+                    const mangaId = e.target.dataset.mangaId, collectionId = detailAddToCollectionSelect.value;
+                    if (mangaId && collectionId) {
+                        await addMangaToSpecificCollection(mangaId, collectionId);
+                        if (appState.currentMangaDetailData?.id == mangaId) {
+                            const updatedMangaData = await (await fetch(`/api/manga_item/${mangaId}`)).json();
+                            if(updatedMangaData) appState.currentMangaDetailData = updatedMangaData;
+                            renderCurrentMangaCollectionsOnDetail();
+                        }
+                    } else alert("请选择一个收藏夹。");
+                });
+            }
+
+            async function loadReaderView(itemId, startImageIndex = 0) {
+                showView('reader'); appState.readerState.isLoading = true; readerLoadingText.style.display = 'block';
+                readerLeftPageImg.classList.add('img-fade-in-setup'); readerRightPageImg.classList.add('img-fade-in-setup');
+                doublePageReaderView.classList.remove('active', 'single-mode-active'); scrollReaderView.classList.remove('active'); scrollReaderView.innerHTML = '';
+                if (readerControls) actualReaderView.style.paddingTop = `${readerControls.offsetHeight}px`;
+                try {
+                    const data = await (await fetch(`/api/manga_item/${itemId}`)).json();
+                    if (data.error) throw new Error(data.error);
+                    // WICHTIG: `is_appendix_to` speichern für den Zurück-Button
+                    appState.readerState.mangaData = { 
+                        id: data.id, 
+                        title: data.title, 
+                        imageUrls: data.image_urls || [], 
+                        totalPages: (data.image_urls || []).length,
+                        is_appendix_to: data.is_appendix_to // Speichern der Parent-ID
+                    };
+                    const savedMode = localStorage.getItem(`readerMode_${data.id}`);
+                    const savedOffset = localStorage.getItem(`readerOffset_${data.id}`);
+                    appState.readerState.currentMode = savedMode ? savedMode : (isMobileDevice() ? 'scroll' : 'double');
+                    appState.readerState.oddEvenOffset = savedOffset ? parseInt(savedOffset,10) : 0;
+                    readerModeSelect.value = appState.readerState.currentMode;
+
+                    let targetPageIndex = 0; const totalPages = appState.readerState.mangaData.totalPages;
+                    startImageIndex = Math.max(0, Math.min(startImageIndex, totalPages > 0 ? totalPages - 1 : 0));
+
+                    if (appState.readerState.currentMode === 'single' || appState.readerState.currentMode === 'scroll') {
+                        targetPageIndex = startImageIndex;
+                    } else {
+                        targetPageIndex = (appState.readerState.oddEvenOffset === 0) ? Math.floor(startImageIndex / 2) * 2 : startImageIndex;
+                    }
+                    targetPageIndex = Math.max(0, targetPageIndex);
+                    if (totalPages > 0 && appState.readerState.currentMode === 'double') {
+                        let maxPossibleIndex = (appState.readerState.oddEvenOffset === 0)
+                            ? (totalPages === 1 ? 0 : (totalPages % 2 === 0 ? totalPages - 2 : totalPages - 1))
+                            : (totalPages - 1);
+                        targetPageIndex = Math.min(targetPageIndex, Math.max(0, maxPossibleIndex));
+                    } else if (totalPages > 0) {
+                        targetPageIndex = Math.min(targetPageIndex, totalPages -1);
+                    } else {
+                        targetPageIndex = 0;
+                    }
+                    appState.readerState.currentPageIndex = targetPageIndex;
+
+                    const originalReaderTitle = appState.readerState.mangaData.title || "漫画标题";
+                    if (isMobileDevice()) {
+                        readerMangaTitleIndicator.textContent = formatTitleForMobile(originalReaderTitle);
+                    } else {
+                        readerMangaTitleIndicator.innerHTML = formatTitleWithNonBoldSegments(originalReaderTitle);
+                    }
+                    readerTotalPagesIndicator.textContent = appState.readerState.mangaData.totalPages;
+
+                    if (appState.readerState.mangaData.totalPages === 0) {
+                        actualReaderView.innerHTML = '<p class="reader-loading-indicator">这部漫画没有页面。</p>';
+                        readerLoadingText.style.display = 'none'; appState.readerState.isLoading = false; return;
+                    }
+                    updateReaderDisplay(); requestFullscreen(); showReaderControls();
+                } catch (error) { actualReaderView.innerHTML = `<p class="reader-loading-indicator">加载阅读器失败: ${error.message}</p>`; console.error("Error loading reader view:", error);
+                } finally { appState.readerState.isLoading = false; }
+            }
+
+            function updateReaderPageIndicator() {
+                if (!appState.readerState.mangaData || appState.readerState.isLoading) { readerPageIndicator.textContent = '-'; return; }
+                const { currentPageIndex, currentMode, oddEvenOffset, mangaData } = appState.readerState;
+                const total = mangaData.totalPages;
+                if (total === 0) { readerPageIndicator.textContent = '0'; return; }
+                if (currentMode === 'scroll') readerPageIndicator.textContent = '滑动';
+                else if (currentMode === 'single') readerPageIndicator.textContent = (currentPageIndex + 1 > 0 && currentPageIndex < total) ? `${currentPageIndex + 1}` : '-';
+                else {
+                    let p1_idx = (oddEvenOffset === 0) ? currentPageIndex : (currentPageIndex === 0 ? -1 : currentPageIndex - 1);
+                    let p2_idx = (oddEvenOffset === 0) ? currentPageIndex + 1 : (currentPageIndex === 0 ? 0 : currentPageIndex);
+                    let text = "";
+                    if (p1_idx >= 0 && p1_idx < total) text += (p1_idx + 1);
+                    if (p2_idx >= 0 && p2_idx < total) {
+                        if (text && p1_idx !== -1) text += "-";
+                        text += (p2_idx + 1);
+                    }
+                    if (!text && p1_idx === -1 && p2_idx === 0 && total > 0) text = (p2_idx + 1).toString();
+                    readerPageIndicator.textContent = text || '-';
+                }
+            }
+
+            async function loadImageWithPromise(imgElement, newSrc, pageAltText = "漫画页面") {
+                imgElement.classList.remove('img-fade-out');
+
+                if (newSrc === null) {
+                    imgElement.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; imgElement.alt = '空白页';
+                    imgElement.classList.remove('img-fade-in-setup'); imgElement.style.opacity = '1'; imgElement.style.visibility = 'visible'; return Promise.resolve();
+                }
+                if (imgElement.src === newSrc && imgElement.complete && !imgElement.classList.contains('img-fade-in-setup') && imgElement.style.opacity !== '0') {
+                    if (imgElement.alt !== pageAltText) imgElement.alt = pageAltText; imgElement.style.visibility = 'visible'; return Promise.resolve();
+                }
+                imgElement.classList.add('img-fade-in-setup');
+                return new Promise((resolve, reject) => {
+                    const tempImg = new Image();
+                    tempImg.onload = () => { imgElement.src = newSrc; imgElement.alt = pageAltText; requestAnimationFrame(() => imgElement.classList.remove('img-fade-in-setup')); resolve(); };
+                    tempImg.onerror = (errEvent) => { imgElement.alt = `图片加载失败: ${pageAltText}`; imgElement.style.visibility = 'visible'; requestAnimationFrame(() => imgElement.classList.remove('img-fade-in-setup')); console.error("Error loading image:", newSrc, errEvent); reject(new Error("Image load error for " + newSrc)); };
+                    tempImg.src = newSrc;
+                });
+            }
+
+			async function updateReaderDisplay() {
+				if (!appState.readerState.mangaData) return;
+				appState.readerState.isLoading = true; readerLoadingText.style.display = 'block';
+				doublePageReaderView.classList.remove('active', 'single-mode-active'); scrollReaderView.classList.remove('active');
+				const { currentPageIndex, currentMode, oddEvenOffset, mangaData } = appState.readerState;
+				const { imageUrls: urls, totalPages: total, title: mangaTitleText } = mangaData;
+
+                const mangaTitleForAlt = formatTitleForMobile(mangaTitleText || "漫画") || (mangaTitleText || "漫画");
+
+				if (total === 0) {
+					readerLoadingText.style.display = 'none'; appState.readerState.isLoading = false; updateReaderPageIndicator();
+					actualReaderView.innerHTML = '<p class="reader-loading-indicator">这部漫画没有页面。</p>'; return;
+				} else if (actualReaderView.querySelector('.reader-loading-indicator')?.textContent.includes("没有页面")) {
+                    actualReaderView.innerHTML = ''; actualReaderView.append(doublePageReaderView, scrollReaderView, readerLoadingText);
+                }
+				try {
+					const promises = [];
+					if (currentMode === 'scroll') {
+						scrollReaderView.classList.add('active');
+						if (scrollReaderView.children.length !== total) {
+							scrollReaderView.innerHTML = '';
+							urls.forEach((url, index) => { const img = document.createElement('img'); img.src = url; img.loading = 'lazy'; img.alt = `${mangaTitleForAlt} - 第 ${index + 1} 页`; img.onerror = function() { this.alt = `图片加载失败: ${img.alt}`; }; scrollReaderView.appendChild(img); });
+						}
+						if (scrollReaderView.children[currentPageIndex]) setTimeout(() => scrollReaderView.children[currentPageIndex]?.scrollIntoView({ behavior: 'auto', block: 'start' }), 0);
+					} else {
+						let leftSrc = null, rightSrc = null; let leftAlt = "空白页", rightAlt = "空白页";
+						if (currentMode === 'single') {
+							doublePageReaderView.classList.add('active', 'single-mode-active');
+							if (currentPageIndex >= 0 && currentPageIndex < total) { leftSrc = urls[currentPageIndex]; leftAlt = `${mangaTitleForAlt} - 第 ${currentPageIndex + 1} 页`; }
+						} else {
+							doublePageReaderView.classList.add('active');
+							if (oddEvenOffset === 0) {
+								if (currentPageIndex >= 0 && currentPageIndex < total) { leftSrc = urls[currentPageIndex]; leftAlt = `${mangaTitleForAlt} - 第 ${currentPageIndex + 1} 页`; }
+								if (currentPageIndex + 1 < total) { rightSrc = urls[currentPageIndex + 1]; rightAlt = `${mangaTitleForAlt} - 第 ${currentPageIndex + 2} 页`; }
+							} else {
+								if (currentPageIndex === 0) { if (0 < total) { rightSrc = urls[0]; rightAlt = `${mangaTitleForAlt} - 第 1 页`; } }
+								else {
+									if (currentPageIndex -1 >= 0 && currentPageIndex -1 < total) { leftSrc = urls[currentPageIndex - 1]; leftAlt = `${mangaTitleForAlt} - 第 ${currentPageIndex} 页`; }
+									if (currentPageIndex >= 0 && currentPageIndex < total) { rightSrc = urls[currentPageIndex]; rightAlt = `${mangaTitleForAlt} - 第 ${currentPageIndex + 1} 页`; }
+								}
+							}
+						}
+						promises.push(loadImageWithPromise(readerLeftPageImg, leftSrc, leftAlt));
+						promises.push(loadImageWithPromise(readerRightPageImg, rightSrc, rightAlt));
+					}
+					if (promises.length > 0) await Promise.allSettled(promises);
+				} catch (e) { console.error("Error in updateReaderDisplay:", e);
+				} finally { appState.readerState.isLoading = false; readerLoadingText.style.display = 'none'; updateReaderPageIndicator(); if (currentMode !== 'scroll') preloadNextImages(); }
+			}
+
+            function changeReaderPage(direction) {
+                if (!appState.readerState.mangaData || appState.readerState.isLoading || appState.readerState.mangaData.totalPages === 0) return;
+                const { currentPageIndex, currentMode, oddEvenOffset, mangaData } = appState.readerState;
+                const totalPages = mangaData.totalPages; let newPageIndex = currentPageIndex;
+                const increment = (currentMode === 'double') ? 2 : 1;
+
+                if (currentMode === 'scroll') {
+                    if (direction > 0 && currentPageIndex < totalPages - 1) newPageIndex = currentPageIndex + 1;
+                    else if (direction < 0 && currentPageIndex > 0) newPageIndex = currentPageIndex - 1;
+                } else if (currentMode === 'single') {
+                     if (direction > 0 && currentPageIndex < totalPages - 1) newPageIndex = currentPageIndex + 1;
+                     else if (direction < 0 && currentPageIndex > 0) newPageIndex = currentPageIndex - 1;
+                } else { 
+                    if (oddEvenOffset === 0) {
+                        if (direction > 0) newPageIndex = Math.min(currentPageIndex + increment, totalPages - (totalPages % 2 === 0 ? 2 : 1));
+                        else newPageIndex = Math.max(0, currentPageIndex - increment);
+                        if (totalPages === 1) newPageIndex = 0;
+                    } else {
+                        if (direction > 0) {
+                            if (currentPageIndex === 0 && totalPages > 0) newPageIndex = 1;
+                            else newPageIndex = Math.min(currentPageIndex + increment, totalPages - 1);
+                        } else {
+                            if (currentPageIndex === 1) newPageIndex = 0;
+                            else newPageIndex = Math.max(0, currentPageIndex - increment);
+                        }
+                        if (totalPages === 1) newPageIndex = 0;
+                    }
+                }
+                newPageIndex = Math.max(0, Math.min(newPageIndex, totalPages > 0 ? totalPages -1 : 0));
+                if (currentMode === 'double' && totalPages > 0) {
+                    let maxPairStartIdx = (oddEvenOffset === 0)
+                        ? (totalPages === 1 ? 0 : (totalPages % 2 === 0 ? totalPages - 2 : totalPages - 1))
+                        : (totalPages - 1);
+                    newPageIndex = Math.min(newPageIndex, maxPairStartIdx);
+                }
+
+
+				if (newPageIndex !== appState.readerState.currentPageIndex) {
+					if (currentMode !== 'scroll') {
+						[readerLeftPageImg, readerRightPageImg].forEach(img => {
+                            if (img.src && !img.src.startsWith('data:image/gif;base64') && !img.classList.contains('img-fade-in-setup')) {
+                                img.classList.add('img-fade-out');
+                            }
+                        });
+					}
+                    appState.readerState.currentPageIndex = newPageIndex;
+                    updateReaderDisplay();
+                } else if (currentMode === 'scroll' && scrollReaderView.children[newPageIndex]) {
+                    scrollReaderView.children[newPageIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+
+            function preloadNextImages() {
+                if (!appState.readerState.mangaData) return;
+                const count = parseInt(readerPreloadCountInput.value, 10) || 1;
+                const { currentPageIndex, currentMode, oddEvenOffset, mangaData } = appState.readerState;
+                const {imageUrls: urls, totalPages: total} = mangaData;
+                if (total === 0) return;
+                let imagesToPreload = new Set();
+
+                if (currentMode === 'single' || currentMode === 'scroll') {
+                    for (let i = 1; i <= count; i++) if (currentPageIndex + i < total) imagesToPreload.add(urls[currentPageIndex + i]);
+                } else {
+                    let baseNextPairCPI;
+                    if (oddEvenOffset === 0) baseNextPairCPI = currentPageIndex + 2;
+                    else baseNextPairCPI = (currentPageIndex === 0) ? 1 : currentPageIndex + 2;
+
+                    for (let i = 0; i < count; i++) {
+                        let p1Idx, p2Idx;
+                        const currentPairCPI = baseNextPairCPI + i * 2;
+                        if (oddEvenOffset === 0) {
+                             p1Idx = currentPairCPI; p2Idx = currentPairCPI + 1;
+                        } else {
+                            p1Idx = currentPairCPI -1; p2Idx = currentPairCPI;
+                        }
+                        if (p1Idx >=0 && p1Idx < total) imagesToPreload.add(urls[p1Idx]);
+                        if (p2Idx >=0 && p2Idx < total) imagesToPreload.add(urls[p2Idx]);
+                    }
+                }
+                imagesToPreload.forEach(url => { if(url) new Image().src = url; });
+            }
+
+            // ANGEPASST: Reader "Zurück"-Button
+            backToHomeBtn.addEventListener('click', () => {
+                exitFullscreen();
+                const mangaData = appState.readerState.mangaData;
+                if (mangaData) {
+                    if (mangaData.is_appendix_to) { // Es ist ein Anhang
+                        navigateToPath(`/manga/${mangaData.is_appendix_to}`); // Gehe zum Detail des Eltern-Manga
+                    } else if (mangaData.id) { // Es ist ein Hauptmanga
+                        navigateToPath(`/manga/${mangaData.id}`); // Gehe zum Detail dieses Manga
+                    } else {
+                        navigateToPath('/'); // Fallback zur Hauptseite
+                    }
+                } else {
+                    navigateToPath('/'); // Fallback zur Hauptseite
+                }
+            });
+
+            readerModeSelect.addEventListener('change', (e) => {
+                appState.readerState.currentMode = e.target.value;
+                if (appState.readerState.mangaData) {
+                    localStorage.setItem(`readerMode_${appState.readerState.mangaData.id}`, appState.readerState.currentMode);
+                    let idxToPreserve = appState.readerState.currentPageIndex;
+                    loadReaderView(appState.readerState.mangaData.id, Math.max(0,idxToPreserve));
+                } else updateReaderDisplay();
+            });
+            readerPrevBtn.addEventListener('click', () => changeReaderPage(-1));
+            readerNextBtn.addEventListener('click', () => changeReaderPage(1));
+            readerOddEvenAlignBtn.addEventListener('click', () => {
+                if (appState.readerState.currentMode === 'double') {
+                    appState.readerState.oddEvenOffset = 1 - appState.readerState.oddEvenOffset;
+                     if (appState.readerState.mangaData) {
+                        localStorage.setItem(`readerOffset_${appState.readerState.mangaData.id}`, appState.readerState.oddEvenOffset);
+                        let currentLeftImageIndex = appState.readerState.currentPageIndex;
+                        if (appState.readerState.oddEvenOffset === 1) { 
+                        } else { 
+                            if (currentLeftImageIndex > 0) currentLeftImageIndex--;
+                        }
+                        loadReaderView(appState.readerState.mangaData.id, Math.max(0, currentLeftImageIndex));
+                     } else updateReaderDisplay();
+                } else alert("对齐功能仅在双页模式下可用。");
+            });
+            readerPreloadCountInput.addEventListener('change', preloadNextImages);
+            document.addEventListener('keydown', (e) => {
+                if (appState.currentView === 'reader' && appState.readerState.mangaData) {
+                    if (appState.readerState.currentMode === 'scroll') {
+                        if (['ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); actualReaderView.scrollTop -= window.innerHeight * 0.8; }
+                        else if (['ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); actualReaderView.scrollTop += window.innerHeight * 0.8; }
+                        else if (e.key === 'Home') { e.preventDefault(); actualReaderView.scrollTop = 0; }
+                        else if (e.key === 'End') { e.preventDefault(); actualReaderView.scrollTop = actualReaderView.scrollHeight; }
+                    } else {
+                         if (e.key === 'ArrowLeft') { e.preventDefault(); changeReaderPage(-1); }
+                         else if (e.key === 'ArrowRight') { e.preventDefault(); changeReaderPage(1); }
+                    }
+                }
+            });
+            readerLeftPageImg.parentElement.addEventListener('click', (e) => {
+                if (appState.readerState.isLoading || !appState.readerState.mangaData) return;
+                if (appState.readerState.currentMode === 'single') { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX - r.left > r.width / 2) changeReaderPage(1); else changeReaderPage(-1); }
+                else if (appState.readerState.currentMode === 'double' && (e.target === readerLeftPageImg.parentElement || e.target === readerLeftPageImg)) changeReaderPage(-1);
+            });
+            readerRightPageImg.parentElement.addEventListener('click', (e) => {
+                if (appState.readerState.isLoading || !appState.readerState.mangaData) return;
+                if (appState.readerState.currentMode === 'double' && (e.target === readerRightPageImg.parentElement || e.target === readerRightPageImg)) changeReaderPage(1);
+            });
+
+            function showAddToCollectionModal(mangaId) {
+                appState.currentMangaIdForModal = mangaId; modalCollectionsList.innerHTML = '';
+                if (appState.collections.length === 0) modalCollectionsList.innerHTML = '<li>沒有可用的收藏夾。</li>';
+                else appState.collections.forEach(col => { const li = document.createElement('li'); li.textContent = col.name; li.dataset.collectionId = col.id; li.onclick = async () => { await addMangaToSpecificCollection(appState.currentMangaIdForModal, col.id); addToCollectionModal.style.display = 'none'; }; modalCollectionsList.appendChild(li); });
+                addToCollectionModal.style.display = 'flex';
+            }
+            async function addMangaToSpecificCollection(mangaId, collectionId) {
+                if (!mangaId || !collectionId) { alert("操作失败，缺少必要信息。"); return; }
+                try {
+                    const response = await fetch(`/api/collection/${collectionId}/mangas`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ manga_id: parseInt(mangaId) })
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert(result.message || '成功添加到收藏夹！');
+                        if (appState.currentView === 'manga_detail' && appState.currentMangaDetailData?.id == mangaId) {
+                            const updatedMangaData = await (await fetch(`/api/manga_item/${mangaId}`)).json();
+                            if(updatedMangaData) appState.currentMangaDetailData = updatedMangaData;
+                            renderCurrentMangaCollectionsOnDetail();
+                        }
+                    } else alert(`添加失败: ${result.error || '未知错误'}`);
+                } catch (error) { console.error('Error adding manga to collection:', error); alert('操作异常'); }
+            }
+            function renderCurrentMangaCollectionsOnDetail() {
+                const listContainer = document.getElementById('detail-manga-current-collections-list');
+                if (!listContainer || !appState.currentMangaDetailData?.member_of_collections) { if(listContainer) listContainer.innerHTML = '<li>信息不适用。</li>'; return; }
+                listContainer.innerHTML = '';
+                if (appState.currentMangaDetailData.member_of_collections.length === 0) listContainer.innerHTML = '<li>未加入任何收藏夹。</li>';
+                else appState.currentMangaDetailData.member_of_collections.forEach(col => {
+                    const li = document.createElement('li'); li.textContent = col.name;
+                    const removeBtn = document.createElement('button'); removeBtn.textContent = '×'; removeBtn.className = 'remove-from-col-btn'; removeBtn.title = `从 ${col.name} 中移除`;
+                    removeBtn.onclick = async () => { if (confirm(`确定要从收藏夹 "${col.name}" 中移除《${appState.currentMangaDetailData.title}》吗？`)) {
+                        try {
+                            const response = await fetch(`/api/collection/${col.id}/manga/${appState.currentMangaDetailData.id}`, { method: 'DELETE' });
+                            if (response.ok) { alert('已从收藏夹移除.'); appState.currentMangaDetailData.member_of_collections = appState.currentMangaDetailData.member_of_collections.filter(c => c.id !== col.id); renderCurrentMangaCollectionsOnDetail(); }
+                            else { const err = await response.json(); alert(`移除失败: ${err.error || '未知错误'}`); }
+                        } catch (error) { console.error("Error removing from collection:", error); alert("移除操作异常."); }
+                    }};
+                    li.appendChild(removeBtn); listContainer.appendChild(li);
+                });
+            }
+            function renderCollectionsList() {
+                if (!collectionsListElement) { console.error("Collections list element not found."); return; }
+                collectionsListElement.innerHTML = '';
+                if (appState.collections.length === 0) { collectionsListElement.innerHTML = '<li><p class="loading-text" style="font-size:0.9em; padding:5px;">沒有收藏夾</p></li>'; return; }
+                appState.collections.forEach(col => {
+                    const li = document.createElement('li'), anchor = document.createElement('a'); anchor.href = '#'; anchor.textContent = col.name; anchor.dataset.collectionId = col.id; anchor.className = 'collection-filter-link';
+                    if (appState.homeViewData.filters.collectionId == col.id) anchor.classList.add('active-collection');
+                    anchor.onclick = (e) => { e.preventDefault(); document.querySelectorAll('#collections-list .active-collection').forEach(el => el.classList.remove('active-collection')); anchor.classList.add('active-collection'); appState.homeViewData.filters.collectionId = col.id.toString(); appState.homeViewData.filters.searchTerm = ''; document.getElementById('search-input').value = ''; appState.homeViewData.currentPage = 1; loadHomeView(); };
+                    li.appendChild(anchor); collectionsListElement.appendChild(li);
+                });
+            }
+            async function loadCollections() {
+                try {
+                    const collections = await (await fetch('/api/collections')).json();
+                    if (!collections) { console.error("Failed to fetch collections: No data"); if (collectionsListElement) collectionsListElement.innerHTML = '<li><p style="color:red;">加载收藏夹失败</p></li>'; return;}
+                    appState.collections = collections; renderCollectionsList();
+                } catch (error) { console.error('Error loading collections:', error); if (collectionsListElement) collectionsListElement.innerHTML = '<li><p style="color:red;">加载收藏夹异常</p></li>'; }
+            }
+            if (modalCreateNewCollectionLink) modalCreateNewCollectionLink.addEventListener('click', async (e) => { e.preventDefault(); const name = prompt("请输入新收藏夹名称:"); if (name?.trim()) { try { const response = await fetch('/api/collections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }) }); if (response.ok) { await loadCollections(); alert("收藏夹创建成功！"); if (addToCollectionModal.style.display === 'flex' && appState.currentMangaIdForModal) showAddToCollectionModal(appState.currentMangaIdForModal); } else { const errData = await response.json(); alert(`创建失败: ${errData.error || '未知错误'}`); } } catch (error) { alert('创建收藏夹操作异常'); } } });
+            if (closeModalBtn) closeModalBtn.addEventListener('click', () => { addToCollectionModal.style.display = 'none'; });
+
+			document.getElementById('search-button')?.addEventListener('click', () => { appState.homeViewData.filters.searchTerm = document.getElementById('search-input').value; appState.homeViewData.filters.collectionId = null; appState.homeViewData.currentPage = 1; loadHomeView(); });
+            document.getElementById('search-input')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') { appState.homeViewData.filters.searchTerm = e.target.value; appState.homeViewData.filters.collectionId = null; appState.homeViewData.currentPage = 1; loadHomeView(); } });
+            document.getElementById('sort-select')?.addEventListener('change', (e) => { appState.homeViewData.filters.sortBy = e.target.value; appState.homeViewData.currentPage = 1; loadHomeView(); });
+            document.getElementById('create-collection-btn')?.addEventListener('click', async () => { const name = prompt("请输入新收藏夹名称:"); if (name?.trim()) { try { const response = await fetch('/api/collections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }) }); if (response.ok) { await loadCollections(); alert("收藏夹创建成功！"); } else { const errData = await response.json(); alert(`创建失败: ${errData.error || '未知错误'}`); } } catch (error) { alert('创建收藏夹操作异常'); } } });
+
+            loadCollections().then(() => {
+                window.addEventListener('popstate', handleRouteChange);
+                if (initialFlaskData && initialFlaskData.requested_item_id && initialFlaskData.view === 'reader') {
+                    let startPage = Math.max(0, parseInt(initialFlaskData.requested_page, 10) || 0);
+                    navigateToPath(`/read/${initialFlaskData.requested_item_id}?page=${startPage}`, true);
+                } else if (initialFlaskData?.requested_item_id && initialFlaskData.view === 'manga_detail') navigateToPath(`/manga/${initialFlaskData.requested_item_id}`, true);
+                else if (initialFlaskData?.requested_author) navigateToPath(`/author/${initialFlaskData.requested_author}`, true);
+                else handleRouteChange();
+            }).catch(error => { console.error("Fatal: Failed to initialize.", error); window.addEventListener('popstate', handleRouteChange); handleRouteChange(); });
+
+			function requestFullscreen() { if (isMobileDevice()) return; const el=document.documentElement; if(el.requestFullscreen)el.requestFullscreen().catch(()=>{}); else if(el.mozRequestFullScreen)el.mozRequestFullScreen(); else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen(); else if(el.msRequestFullscreen)el.msRequestFullscreen(); }
+			function exitFullscreen() { if(isMobileDevice())return; if(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement||document.msFullscreenElement){ if(document.exitFullscreen)document.exitFullscreen().catch(()=>{}); else if(document.mozCancelFullScreen)document.mozCancelFullScreen(); else if(document.webkitExitFullscreen)document.webkitExitFullscreen(); else if(document.msExitFullscreen)document.msExitFullscreen();}}
+
+			const readerControls = document.querySelector('.reader-controls');
+			let controlsHideTimeout = null;
+			function showReaderControls() { if (!readerControls || readerControls.classList.contains('controls-manually-hidden')) return; readerControls.classList.remove('hidden-controls'); clearTimeout(controlsHideTimeout); controlsHideTimeout = setTimeout(() => { if (appState.currentView === 'reader' && !readerControls.matches(':hover')) hideReaderControls(); }, 3000); }
+			function hideReaderControls() { if (!readerControls || readerControls.classList.contains('controls-manually-hidden')) return; readerControls.classList.add('hidden-controls');}
+            if (readerViewContainer && readerControls) {
+                ['mousemove', 'mouseenter', 'touchstart'].forEach(evtType => {
+                    readerViewContainer.addEventListener(evtType, (e) => {
+                        if (appState.currentView === 'reader' &&
+                            (e.type !== 'mousemove' || e.clientY < 80) &&
+                            !readerControls.classList.contains('controls-manually-hidden')) {
+                            showReaderControls();
+                        }
+                    });
+                });
+
+                readerControls.addEventListener('mouseenter', () => {
+                    if (appState.currentView === 'reader' && !readerControls.classList.contains('controls-manually-hidden')) {
+                        clearTimeout(controlsHideTimeout);
+                        readerControls.classList.remove('hidden-controls');
+                    }
+                });
+
+                readerControls.addEventListener('mouseleave', () => {
+                    if (appState.currentView === 'reader' && !readerControls.classList.contains('controls-manually-hidden')) {
+                        controlsHideTimeout = setTimeout(hideReaderControls, 500);
+                    }
+                });
+
+                 if (readerToggleControlsBtn) {
+                    readerToggleControlsBtn.addEventListener('click', () => {
+                        if (readerControls) {
+                            if (readerControls.classList.contains('controls-manually-hidden')) {
+                                readerControls.classList.remove('controls-manually-hidden');
+                                readerToggleControlsBtn.textContent = '隐藏工具栏';
+                                showReaderControls(); 
+                            } else {
+                                readerControls.classList.add('controls-manually-hidden');
+                                readerToggleControlsBtn.textContent = '显示工具栏';
+                                clearTimeout(controlsHideTimeout); 
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

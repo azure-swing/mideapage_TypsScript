@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 暗黑次元</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', 'Orbitron', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            color: #E0E0E0;
+            background-color: #121212;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            transition: background-image 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, #00ffff, transparent);
+            border-radius: 50%;
+            animation: float 8s infinite linear;
+            opacity: 0.6;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+        
+        .login-container {
+            position: relative;
+            z-index: 10;
+            /* 
+              >>> ADJUST MAIN BOX BACKGROUND TRANSPARENCY HERE <<<
+              The last value in rgba() (e.g., 0.70 below) controls this.
+              Example: rgba(10, 10, 30, 0.60) for more transparency.
+                       rgba(10, 10, 30, 0.85) for less transparency.
+            */
+            background: rgba(10, 10, 30, 0.5); 
+            backdrop-filter: blur(18px) saturate(160%);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            padding: 50px 40px;
+            width: 380px; /* Login box width */
+            text-align: center;
+            box-shadow: 
+                0 0 60px rgba(0, 255, 255, 0.35),
+                0 0 120px rgba(179, 157, 219, 0.25),
+                inset 0 0 50px rgba(255, 255, 255, 0.05);
+            animation: containerGlow 3s ease-in-out infinite alternate; 
+            overflow: hidden;
+            transition: transform 0.15s ease-out; 
+            opacity: 1;
+            transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1);
+        }
+        
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            /* 
+              >>> ADJUST ANIMATED BORDER TRANSPARENCY HERE <<<
+              Change #hex colors to rgba(R, G, B, ALPHA) if you want the border itself to be transparent.
+              Example (for a 50% transparent border): 
+                background: linear-gradient(45deg, 
+                                            rgba(0,255,255,0.5), 
+                                            rgba(179,157,219,0.5), 
+                                            rgba(0,255,255,0.5)
+                                           );
+            */
+            background: linear-gradient(45deg, #00ffff, #B39DDB, #00ffff);
+            background-size: 400% 400%;
+            border-radius: 20px;
+            z-index: -1;
+            animation: borderGlow 4s ease infinite;
+        }
+        
+        @keyframes containerGlow {
+            0% { box-shadow: 0 0 50px rgba(0, 255, 255, 0.3), 0 0 100px rgba(179, 157, 219, 0.2), inset 0 0 50px rgba(255, 255, 255, 0.05); }
+            100% { box-shadow: 0 0 80px rgba(0, 255, 255, 0.5), 0 0 150px rgba(179, 157, 219, 0.3), inset 0 0 80px rgba(255, 255, 255, 0.1); }
+        }
+        
+        @keyframes borderGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .title {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(45deg, #00ffff, #B39DDB, #FFFFFF);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: textGlow 2s ease-in-out infinite alternate;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        
+        @keyframes textGlow {
+            0% { 
+                background-position: 0% 50%;
+                filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8)) drop-shadow(0 0 5px rgba(179, 157, 219, 0.5));
+            }
+            100% { 
+                background-position: 100% 50%;
+                filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.9)) drop-shadow(0 0 10px rgba(179, 157, 219, 0.7));
+            }
+        }
+        
+        .subtitle {
+            color: #90A4AE;
+            font-size: 1em;
+            margin-bottom: 35px;
+            font-weight: 300;
+        }
+        
+        .form-group {
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #00ffff;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .input-container {
+            position: relative;
+        }
+        
+        .form-group input[type="password"] {
+            width: 100%;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            color: #F0F0F0;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            outline: none;
+            box-sizing: border-box;
+        }
+        
+        .form-group input[type="password"]:focus {
+            border-color: #00ffff;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.5),
+                inset 0 0 10px rgba(0, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.7);
+        }
+        
+        .form-group input[type="password"]::placeholder {
+            color: #777;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(45deg, #B39DDB, #00BCD4);
+            border: none;
+            border-radius: 10px;
+            color: #FFFFFF;
+            font-size: 1.1em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(94, 53, 177, 0.3), 0 3px 10px rgba(0, 188, 212, 0.2);
+        }
+        
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+                0 10px 30px rgba(126, 87, 194, 0.4),
+                0 5px 20px rgba(0, 188, 212, 0.3);
+        }
+        
+        .login-btn:hover::before { left: 100%; }
+        
+        .login-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 3px 10px rgba(94, 53, 177, 0.2), 0 2px 8px rgba(0, 188, 212, 0.15);
+        }
+        
+        .deco-line {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.7), transparent);
+            margin: 35px 0;
+            animation: lineGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes lineGlow {
+            0% { opacity: 0.4; filter: blur(1px); }
+            100% { opacity: 0.9; filter: blur(0px); }
+        }
+        
+        .error-message {
+            background: rgba(255, 0, 100, 0.15);
+            border: 1px solid rgba(255, 0, 100, 0.5);
+            color: #ff8fab;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 25px;
+            font-size: 0.9em;
+            animation: errorPulse 0.7s ease-out;
+        }
+        
+        @keyframes errorPulse {
+            0% { opacity: 0; transform: scale(0.95) translateY(5px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        @media (max-width: 420px) {
+            .login-container { 
+                width: 90%; 
+                padding: 40px 25px;
+            }
+            .title { font-size: 2.2em; }
+            .subtitle { font-size: 0.9em; margin-bottom: 25px; }
+            .form-group input[type="password"] { padding: 14px 18px; }
+            .login-btn { padding: 14px; font-size: 1em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    
+    <div class="login-container">
+        <h1 class="title">欢迎</h1>
+        <p class="subtitle">请输入授权码进入</p>
+        
+        <div class="deco-line"></div>
+        
+        <form method="POST" action="{{ url_for('login_submit_route') }}" id="loginForm">
+            <div class="form-group">
+                <label for="login_code">登录授权码:</label>
+                <div class="input-container">
+                    <input type="password" id="login_code" name="login_code" placeholder="在此输入代码" required autofocus>
+                </div>
+            </div>
+            
+            <button type="submit" class="login-btn">
+                <span>进入 ➤</span>
+            </button>
+        </form>
+        
+        {% if error %}
+            <div class="deco-line" style="margin-top: 30px; margin-bottom: 0;"></div>
+            <p class="error-message">{{ error }}</p>
+        {% endif %}
+    </div>
+    
+    <script>
+        const backgroundImages = {{ background_images | tojson }};
+        let currentImageIndex = 0;
+        const bodyElement = document.body;
+
+        function setBackground(imageUrl) {
+            bodyElement.style.backgroundImage = `linear-gradient(to bottom, rgba(5, 5, 15, 0.4), rgba(0, 0, 0, 0.8)), url('${imageUrl}')`;
+        }
+
+        function changeBackground() {
+            if (backgroundImages && backgroundImages.length > 0) {
+                currentImageIndex = (currentImageIndex + 1) % backgroundImages.length;
+                setBackground(backgroundImages[currentImageIndex]);
+            }
+        }
+
+        if (backgroundImages && backgroundImages.length > 0) {
+            currentImageIndex = Math.floor(Math.random() * backgroundImages.length);
+            setBackground(backgroundImages[currentImageIndex]);
+            setInterval(changeBackground, 7000);
+        } else {
+            bodyElement.style.background = `#0f121a linear-gradient(to bottom, rgba(10,10,20,0.5), rgba(0,0,0,0.9))`;
+            bodyElement.style.backgroundSize = 'cover';
+            bodyElement.style.backgroundPosition = 'center center';
+            bodyElement.style.backgroundRepeat = 'no-repeat';
+        }
+
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            if (!particlesContainer) return;
+            const particleCount = 40;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const size = Math.random() * 3 + 1;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                particle.style.animationDuration = (Math.random() * 4 + 4) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        const inputs = document.querySelectorAll('input[type="password"]');
+        inputs.forEach(input => {
+            const inputContainer = input.closest('.input-container') || input.parentElement;
+            input.addEventListener('focus', function() {
+                inputContainer.style.transform = 'scale(1.02)';
+                inputContainer.style.transition = 'transform 0.2s ease-out';
+            });
+            
+            input.addEventListener('blur', function() {
+                inputContainer.style.transform = 'scale(1)';
+            });
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            const container = document.querySelector('.login-container');
+            if (!container) return;
+
+            const mouseX = e.clientX - window.innerWidth / 2;
+            const mouseY = e.clientY - window.innerHeight / 2;
+
+            const maxRotY = 10;
+            const maxRotX = 7.5;
+
+            const rotY = (mouseX / (window.innerWidth / 2)) * maxRotY;
+            const rotX = -(mouseY / (window.innerHeight / 2)) * maxRotX;
+
+            container.style.transform = `perspective(1000px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1)`;
+        });
+
+        document.body.addEventListener('mouseleave', function() {
+            const container = document.querySelector('.login-container');
+            if (container) {
+                container.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            createParticles();
+        });
+    </script>
+</body>
+</html>

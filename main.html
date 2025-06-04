@@ -1,0 +1,3138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的专属影音库</title>
+  <style>
+				/* CSS变量定义 */
+				:root {
+						/* 黑灰色系搭配静谧蓝强调 */
+						--bg-color: #1F1F1F; /* 非常深的灰/黑 - 背景 */
+						--nav-bg: #2B2B2B; /* 深灰色 - 导航、过滤条等 */
+						--card-bg: #3D3D3D; /* 中等深度灰色 - 卡片、输入框等 */
+						--accent-color: #5C6BC0; /* 静谧蓝色 - 强调色，品牌名称，活动状态 */
+						--hover-color: #7986CB; /* 较亮静谧蓝色 - 悬停效果 */
+						--text-color: #F0F0F0; /* 浅灰色 - 主要文本 */
+						--secondary-text: #B0B0B0; /* 中等灰色 - 次要文本 */
+						/* --like-highlight-bg: #4A148C; -- OLD: 深紫色背景 for liked item title */
+						
+						/* NEW: Liked item styling */
+						--liked-item-bg: #fde0e0;       /* 淡粉色背景 for liked item */
+						--liked-item-border-color: #E53935; /* 红色竖线 for liked item */
+
+						--font-family: 'Arial', sans-serif;
+						--transition-speed: 0.3s;
+						--border-radius: 5px;
+				}
+
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    /* 顶部导航 */
+    .navbar {
+      background-color: var(--nav-bg);
+      padding: 15px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      justify-content: space-between; /* 使左右两端对齐，中间内容居中 */
+      position: relative;
+    }
+
+    .navbar-left-section { /* 新增：左侧区域样式 */
+        display: flex;
+        align-items: center;
+        gap: 15px; /* 品牌和退出按钮之间的间距 */
+    }
+
+    .navbar-brand {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: var(--accent-color);
+      text-decoration: none;
+      margin-right: 0; /* 如果之前有右边距，可以移除或调整 */
+    }
+
+    .logout-button-small { /* 新增：退出小按钮样式 */
+        font-size: 1.2em; /* 图标大小 */
+        color: var(--secondary-text);
+        text-decoration: none;
+        padding: 5px 8px;
+        border-radius: var(--border-radius);
+        background-color: transparent; /* 默认透明背景 */
+        transition: color var(--transition-speed), background-color var(--transition-speed);
+        line-height: 1; /* 确保图标垂直居中 */
+    }
+    .logout-button-small:hover {
+        color: #E91E63; /* 悬停时变色，例如粉红色 */
+        background-color: var(--card-bg); /* 轻微背景变化 */
+    }
+
+    .navbar-nav { /* 中间导航项 */
+      display: flex;
+      gap: 20px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      /* flex: 1; */ /* 移除或调整 flex:1，避免它挤压左右部分 */
+      justify-content: center; /* 仍然尝试居中，但 space-between 会起主要作用 */
+      align-items: center;
+      /* 为确保即使在 flex:1 被移除后，导航栏中间部分不会太宽，可以给一个最大宽度 */
+      /* max-width: 50%; 或者根据内容调整 */
+    }
+    .navbar-nav li a {
+      color: var(--text-color);
+      text-decoration: none;
+      transition: color var(--transition-speed) ease, background-color var(--transition-speed) ease;
+      padding: 5px 10px;
+      border-radius: var(--border-radius);
+    }
+    .navbar-nav li a:hover {
+      color: var(--secondary-text);
+      background-color: var(--card-bg);
+    }
+
+    /* 搜索框 */
+    .search-box {
+      /* margin-left: auto; */ /* 如果想让搜索框强制靠右，可以尝试这个，但 space-between 应该能处理 */
+      display: flex; /* 确保内部元素对齐 */
+      align-items: center;
+    }
+    .search-input {
+      padding: 8px 15px;
+      border-radius: 20px;
+      border: none;
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      transition: box-shadow var(--transition-speed);
+    }
+    .search-input:focus {
+      outline: none;
+      box-shadow: 0 0 5px var(--accent-color);
+    }
+    /* 媒体库过滤区域（支持多选，读取 Emby 媒体库数据） */
+    .library-filters {
+      background-color: var(--card-bg);
+      padding: 10px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .library-filter {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      user-select: none;
+      padding: 5px 10px;
+      background-color: var(--nav-bg);
+      border-radius: var(--border-radius);
+      transition: background-color var(--transition-speed);
+    }
+    .library-filter.active {
+      background-color: var(--accent-color);
+    }
+    .library-filter input {
+      margin-right: 5px;
+    }
+    /* 悬浮的标签下拉按钮 - 定位在屏幕高度的 1/3 */
+    .tag-dropdown {
+      position: fixed;
+      top: calc(30%);
+      right: 20px;
+      z-index: 1000;
+    }
+    .tag-btn {
+      background-color: var(--nav-bg);
+      border: none;
+      color: var(--text-color);
+      font-size: 1.5em;
+      cursor: pointer;
+      padding: 5px 10px;
+      border-radius: var(--border-radius);
+      transition: background-color var(--transition-speed);
+    }
+    .tag-btn:hover {
+      background-color: var(--hover-color);
+    }
+    .tag-panel {
+      position: absolute;
+      top: 40px;
+      right: 0;
+      background-color: var(--card-bg);
+      padding: 10px;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      max-height: 600px;
+      overflow-y: auto;
+      width: 400px;
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+    }
+    .tag-panel.active {
+      display: grid;
+    }
+    .tag-option {
+      display: flex;
+      align-items: center;
+    }
+    .tag-option input {
+      margin-right: 5px;
+    }
+    /* 随机推荐轮播图（使用 Backdrop 缩略图） */
+				.random-carousel {
+      overflow: hidden;
+    }
+
+    .random-carousel .carousel-item img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      display: block;
+						overflow: hidden; /* 隐藏水平方向的溢出内容 */
+    }
+    .random-carousel .carousel-slide {
+      display: flex;
+      gap: 15px;
+      transition: transform var(--transition-speed);
+      padding: 10px 0;
+      flex-wrap: nowrap;
+    }
+    .random-carousel .carousel-item {
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      background-color: var(--card-bg);
+      cursor: pointer;
+      transition: transform var(--transition-speed), box-shadow var(--transition-speed), background-color var(--transition-speed), border-left var(--transition-speed);
+      position: relative;
+      width: 320px;
+      height: 180px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .random-carousel .carousel-item:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .random-carousel .carousel-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center center;
+      display: block;
+      background-color: #1a1a1a;
+    }
+    .random-carousel .carousel-item-title {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 8px 10px;
+      font-size: 0.9em;
+      white-space: normal;
+      overflow: hidden;
+      line-height: 1.4;
+      background-color: rgba(0, 0, 0, 0.75);
+      color: var(--text-color);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      max-height: 100%;
+
+    }
+    .random-carousel .carousel-item:hover .carousel-item-title {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    /* 排序区域 */
+    .sort-container {
+      display: flex;
+      gap: 15px;
+      padding: 10px 20px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      background-color: var(--nav-bg);
+      margin-bottom: 20px;
+    }
+    .sort-button {
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      padding: 8px 15px;
+      border: none;
+      cursor: pointer;
+      border-radius: var(--border-radius);
+      transition: background-color var(--transition-speed);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sort-button:hover {
+      background-color: var(--hover-color);
+    }
+    .sort-button::after {
+      content: '▲';
+      font-size: 0.8em;
+      color: #888;
+      transition: transform 0.2s ease;
+      opacity: 0;
+    }
+    .sort-button.active::after {
+       opacity: 1;
+    }
+    .sort-button.desc::after {
+      content: '▼';
+      transform: translateY(1px);
+    }
+    .sort-button.active {
+      color: var(--accent-color);
+    }
+    .sort-button.active::after {
+      color: var(--accent-color);
+    }
+    /* 主体容器 */
+    .container {
+      padding: 0 20px 20px 20px;
+    }
+    .section-title {
+      font-size: 1.8em;
+      margin-bottom: 15px;
+      padding-left: 0;
+    }
+    /* 海报网格 */
+	.carousel-grid {
+	  display: grid;
+	  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	  gap: 20px;
+	  padding-bottom: 15px;
+	  width: 80%;         /* 限定宽度为页面的80% */
+	  margin: 0 auto;     /* 居中显示 */
+	}
+
+    .carousel-item {
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      background-color: var(--card-bg);
+      cursor: pointer;
+      transition: transform var(--transition-speed), box-shadow var(--transition-speed), background-color var(--transition-speed), border-left var(--transition-speed);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      /* NEW: Ensure border doesn't add to width for layout calculations */
+      border-left: 4px solid transparent; /* Default transparent border */
+    }
+    .carousel-item:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      z-index: 10;
+    }
+    .carousel-item img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      display: block;
+    }
+	.carousel-item-title {
+	  padding: 10px;
+	  text-align: center;
+	  font-size: 0.9em;
+	  line-height: 1.2em;
+	  height: 3em;                  /* 固定高度 */
+	  box-sizing: border-box;         /* 包含内边距 */
+	  overflow: hidden;
+    background-color: var(--card-bg); /* Default background */
+    transition: background-color var(--transition-speed);
+    color: var(--text-color); /* Ensure default text color */
+	}
+    /* OLD LIKED STYLE - can be removed or commented out
+    .carousel-item-title.liked-movie-title {
+        background-color: var(--like-highlight-bg) !important; 
+        color: var(--text-color); 
+    }
+    */
+
+    /* NEW: Liked item style for the entire card */
+    .carousel-item.liked-item {
+      background-color: var(--liked-item-bg); /* Light pink background */
+      border-left: 4px solid var(--liked-item-border-color); /* Red vertical line */
+    }
+    .carousel-item.liked-item .carousel-item-title {
+        color: #333; /* Darker text on light pink for better readability */
+        background-color: transparent; /* Make title background transparent or match item bg */
+    }
+
+
+    /* 海报悬停显示附加信息 */
+
+    /* 分页 */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 30px;
+      padding-bottom: 20px;
+    }
+    .page-button,
+    .page-input,
+    .page-info {
+      padding: 8px 12px;
+      border-radius: var(--border-radius);
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      border: none;
+      cursor: pointer;
+      transition: background-color var(--transition-speed);
+      text-align: center;
+      text-decoration: none;
+    }
+    .page-button:hover:not(:disabled) {
+      background-color: var(--hover-color);
+    }
+    .page-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+	.page-input {
+	  width: 60px;
+	  color: var(--text-color);
+	  text-align: center;
+	  cursor: text;
+	  -moz-appearance: textfield; /* Firefox */
+	}
+	.page-input:focus {
+	  outline: none;
+	  border: 1px solid var(--hover-color);
+	}
+	.page-input::-webkit-inner-spin-button,
+	.page-input::-webkit-outer-spin-button {
+	  -webkit-appearance: none;
+	  margin: 0;
+	}
+
+    .page-info {
+        background-color: transparent;
+        cursor: default;
+        color: var(--secondary-text);
+    }
+    /* 视频详情页 (悬停卡片) */
+	.video-detail-page { /* This is for the hover card */
+		display: none; 
+		position: absolute; /* Changed from fixed to absolute for hover card */
+		z-index: 999;
+		width: 400px; /* Example width, adjust as needed */
+		/* top/left positioning will be handled by JS */
+	}
+
+
+    .video-detail-container {
+      margin: 0; /* No margin for hover card itself */
+      padding: 15px; /* Slightly less padding for hover card */
+      background-color: var(--nav-bg);
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .video-detail-backdrop { /* Renamed from poster, for hover card image */
+      max-width: 120px; /* Smaller image for hover card */
+      height: auto;
+      border-radius: var(--border-radius);
+      margin-bottom: 10px;
+      float: left;
+      margin-right: 15px;
+    }
+	:root {
+		--video-detail-title-default-size: 1.2em; /* Smaller for hover */
+		--video-detail-title-small-size: 0.9em; /* Even smaller if long for hover */
+	}
+	.video-detail-title {
+		font-size: var(--video-detail-title-default-size); 
+		margin-bottom: 8px; /* Less margin for hover */
+	}
+	.video-detail-title.long-title {
+		font-size: var(--video-detail-title-small-size); 
+	}
+
+    .video-detail-info {
+        color: var(--secondary-text);
+        margin-bottom: 8px; /* Less margin for hover */
+        font-size: 0.8em; /* Smaller font for hover */
+    }
+    .video-detail-info span {
+        margin-right: 10px; /* Less margin for hover */
+    }
+    .video-detail-overview {
+      font-size: 0.75em; /* Smaller font for hover */
+      line-height: 1.5;
+      color: #ccc;
+      clear: both;
+      padding-top: 8px; /* Less padding for hover */
+      max-height: 70px; /* Limit overview height in hover card */
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* Back to home button is not needed for hover card */
+    .video-detail-container::after { /* Clearfix */
+        content: "";
+        clear: both;
+        display: table;
+    }
+
+    /* Loading indicator */
+    .loading-indicator {
+        text-align: center;
+        padding: 50px;
+        font-size: 1.2em;
+        color: var(--secondary-text);
+	}
+    /* --- Styles for Actors View --- */
+    #actorsViewPage {
+      padding-top: 20px;
+    }
+
+    .actor-sort-controls {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .actor-list-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px; /* Gap between actor names */
+      margin-bottom: 10px;
+      max-height: 80px; /* Approx height for 2 rows, adjust as needed */
+      overflow: hidden;
+      transition: max-height 0.5s ease-in-out;
+    }
+
+    .actor-list-container.expanded {
+       max-height: 450px; /* 估算值：大约15行的高度，可以根据实际调整 */
+       overflow-y: auto; /* 添加垂直滚动条 */
+       /* 可选：添加一些内边距让滚动条不紧贴边缘 */
+       padding-right: 5px;
+    }
+
+    .actor-list-item {
+      background-color: var(--card-bg);
+      padding: 5px 12px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: background-color var(--transition-speed), color var(--transition-speed);
+      white-space: nowrap; /* Prevent wrapping */
+      font-size: 0.9em;
+    }
+
+    .actor-list-item:hover, .actor-list-item.active {
+      background-color: var(--accent-color);
+      color: var(--text-color);
+    }
+
+    .expand-button {
+      display: block; /* Make it block to center easily */
+      margin: 10px auto 20px auto; /* Center the button */
+      background-color: var(--nav-bg);
+      color: var(--text-color);
+      padding: 8px 15px;
+      border: none;
+      cursor: pointer;
+      border-radius: var(--border-radius);
+      transition: background-color var(--transition-speed);
+    }
+
+    .expand-button:hover {
+      background-color: var(--hover-color);
+    }
+
+    .actor-details-container {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid var(--nav-bg); /* Separator */
+    }
+
+				.actor-detail-item {
+								display: flex;
+								align-items: flex-start; /* 保持内容顶部对齐 */
+								gap: 20px;
+								margin-bottom: 20px;
+				}
+
+				.actor-detail-image { /* 这是演员图片的 DIV 容器 */
+						width: 100px;          /* 明确设置宽度 */
+						height: 150px;         /* 明确设置高度 */
+						border-radius: var(--border-radius);
+						background-color: var(--card-bg); /* 图片加载失败或透明时的背景 */
+						flex-shrink: 0;      /* 在flex布局中，防止此容器被压缩 */
+						overflow: hidden;      /* 关键！裁剪掉超出此容器尺寸的任何内容 (包括图片) */
+						position: relative;    /* 为内部绝对定位的元素（如果需要）建立上下文，也有助于某些情况下的 overflow 行为 */
+						cursor: pointer;
+						/* 确保没有min-width或min-height干扰 */
+						min-width: 100px;
+						min-height: 150px;
+				}
+
+				.actor-detail-image img { /* 针对 .actor-detail-image 内部的 <img> 标签 */
+						display: block;        /* 消除图片下方的额外空白，并使其表现更像块级元素 */
+						width: 100%;           /* 图片宽度撑满其父容器 (.actor-detail-image) */
+						height: 100%;          /* 图片高度撑满其父容器 (.actor-detail-image) */
+						object-fit: cover;     /* 核心！保持图片宽高比，同时填充整个容器。
+																															如果图片宽高比与容器不匹配，图片会被裁剪以适应。 */
+						object-position: center center; /* 如果发生裁剪，确保图片居中显示 */
+				}
+
+				.actor-movies-scrollable {
+						flex-grow: 1;
+						overflow-x: auto;
+						white-space: nowrap;
+						padding-bottom: 10px; /* 增加一点padding，防止滚动条遮挡内容 */
+            min-height: 200px; /* 确保即使没有海报，也有一定高度，避免塌陷 */
+						scrollbar-width: thin;
+						scrollbar-color: var(--hover-color) var(--card-bg);
+				}
+    /* Webkit scrollbar styling */
+    .actor-movies-scrollable::-webkit-scrollbar {
+        height: 8px;
+    }
+    .actor-movies-scrollable::-webkit-scrollbar-track {
+        background: var(--card-bg);
+        border-radius: 4px;
+    }
+    .actor-movies-scrollable::-webkit-scrollbar-thumb {
+        background-color: var(--hover-color);
+        border-radius: 4px;
+    }
+
+
+    .actor-movie-poster {
+      width: 120px; /* Width of movie posters */
+      height: 180px; /* Height of movie posters */
+      object-fit: cover;
+      border-radius: var(--border-radius);
+      margin-right: 15px; /* Space between posters */
+      display: inline-block; /* Needed for white-space: nowrap */
+      vertical-align: top; /* Align posters to the top */
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      background-color: var(--card-bg); /* Placeholder bg */
+    }
+    .actor-movie-poster:hover {
+        transform: scale(1.05);
+    }
+    .actor-movie-poster:last-child {
+        margin-right: 0;
+    }
+    /* --- End of Styles for Actors View --- */
+
+    /* --- Styles for Series View (美化修改) --- */
+    .series-view-page {
+        width: 80%; /* 稍微加宽以容纳内容 */
+        max-width: 1200px; /* 限制最大宽度，避免在大屏幕上过宽 */
+        margin-left: auto;
+        margin-right: auto;
+        padding-top: 25px; /* 增加顶部内边距 */
+        box-sizing: border-box;
+    }
+    .series-view-page > .section-title { /* 针对系列视图的标题 */
+        margin-bottom: 20px;
+        text-align: center; /* 标题居中 */
+        color: var(--accent-color); /* 使用强调色 */
+    }
+    .series-summary-controls {
+        margin-bottom: 25px; /* 增加与列表的间距 */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px; /* 增加元素间距 */
+        padding: 10px 0; /* 给控制区域一点垂直内边距 */
+        border-bottom: 1px solid var(--card-bg); /* 添加底部分隔线 */
+    }
+    #seriesTotalCountSpan {
+        font-size: 1em; /* 稍微调大 */
+        color: var(--text-color);
+    }
+
+    @media (max-width: 768px) {
+        .series-view-page {
+            width: 95%; 
+        }
+        .series-summary-controls {
+            flex-direction: column;
+            align-items: center; /* 居中对齐 */
+        }
+        .series-summary-controls > div { /* 排序按钮容器 */
+            margin-top: 15px;
+        }
+    }
+
+    .series-item {
+        background-color: var(--nav-bg);
+        padding: 18px 20px; /* 增加内边距 */
+        margin-bottom: 15px; /* 增加项间距 */
+        border-radius: var(--border-radius);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+        transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
+    }
+    .series-item:hover {
+        background-color: var(--card-bg); /* 悬停时改变背景色 */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    .series-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        padding-bottom: 10px; /* 为头部和展开内容之间留出一些空间 */
+        margin-bottom: 10px; /* 如果有展开内容，头部和内容之间的间距 */
+        border-bottom: 1px solid transparent; /* 初始透明边框 */
+    }
+    .series-item-header.expanded-header { /* 当内容展开时，给头部一个分隔线 */
+        border-bottom-color: var(--card-bg);
+    }
+
+
+    .series-item-name {
+        font-size: 1.3em; /* 调大系列名称 */
+        font-weight: bold;
+        color: var(--text-color);
+        flex-grow: 1;
+        margin-right: 15px;
+        display: flex; /* 用于对齐内部的span */
+        flex-direction: column; /* 让数量和标签在名称下方 */
+        gap: 5px; /* 名称和下方内容（数量、标签）的间距 */
+    }
+    .series-item-name-main { /* 新增一个span包裹主名称 */
+        display: block;
+    }
+
+    .series-item-details-line { /* 新增：用于包裹数量和标签的行 */
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .series-item-name .series-movie-count {
+        font-size: 0.85em; /* 调整字体大小 */
+        font-weight: normal;
+        color: var(--secondary-text);
+        /* margin-left: 0; */ /* 移除左边距，由父级gap控制 */
+    }
+
+    .series-item-expand-btn {
+        background-color: var(--card-bg);
+        color: var(--accent-color); /* 使用强调色 */
+        padding: 8px 15px; /* 调整按钮大小 */
+        border: 1px solid var(--accent-color); /* 添加边框 */
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: background-color var(--transition-speed), color var(--transition-speed), transform 0.2s ease;
+        flex-shrink: 0;
+        font-weight: 500;
+        min-width: 90px; /* 确保按钮宽度一致 */
+        text-align: center;
+    }
+    .series-item-expand-btn:hover {
+        background-color: var(--accent-color);
+        color: var(--bg-color); /* 反色效果 */
+        transform: translateY(-1px); /* 轻微上浮效果 */
+    }
+
+    .series-movies-container {
+        margin-top: 0; /* 由于头部已添加margin-bottom，这里设为0 */
+        padding-top: 15px;
+        /* border-top: 1px solid var(--card-bg); */ /* 边框移到头部下方 */
+        display: none;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 10px;
+        min-height: 270px; /* 给海报容器一个最小高度，避免加载时跳动 */
+        background-color: rgba(0,0,0,0.1); /* 轻微背景，与item区分 */
+        border-radius: var(--border-radius); /* 给展开区域也加圆角 */
+    }
+    .series-movies-container.expanded {
+        display: block;
+    }
+    .series-movies-container .loading-indicator,
+    .series-movies-container .no-movies-message { /* 统一样式 */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 250px; /* 与海报高度匹配 */
+        color: var(--secondary-text);
+        font-style: italic;
+        width: 100%; /* 确保占满宽度 */
+    }
+
+    /* START MODIFIED/NEW CSS FOR SERIES MOVIE ITEM WRAPPER AND ACTOR NAME */
+    .series-movie-item-wrapper {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        width: 160px; /* Match poster width */
+        margin-right: 15px;
+        vertical-align: top;
+    }
+    .series-movie-item-wrapper:last-child {
+        margin-right: 0;
+    }
+
+    .series-movies-container .actor-movie-poster {
+        width: 160px; 
+        height: 240px; 
+        object-fit: cover;
+        border-radius: var(--border-radius);
+        /* margin-right: 15px; -- REMOVED, handled by wrapper */
+        display: block; /* Poster is a block inside the flex wrapper */
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background-color: var(--card-bg);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .series-movies-container .actor-movie-poster:hover {
+        transform: scale(1.05);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    }
+    /* .series-movies-container .actor-movie-poster:last-child { -- REMOVED, handled by wrapper } */
+
+    .series-movie-actor-name {
+        display: block;
+        font-size: 0.75em;
+        color: var(--secondary-text);
+        margin-top: 4px;
+        padding: 0 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+        line-height: 1.3;
+    }
+    /* END MODIFIED/NEW CSS */
+
+
+    .series-movies-container::-webkit-scrollbar {
+        height: 10px; /* 稍微加粗滚动条 */
+    }
+    .series-movies-container::-webkit-scrollbar-track {
+        background: var(--nav-bg); /* 滚动条轨道颜色 */
+        border-radius: 5px;
+    }
+    .series-movies-container::-webkit-scrollbar-thumb {
+        background-color: var(--accent-color); /* 滚动条滑块颜色 */
+        border-radius: 5px;
+    }
+     .series-movies-container::-webkit-scrollbar-thumb:hover {
+        background-color: var(--hover-color);
+    }
+
+    .series-item-tags-container {
+        /* margin-left: 0; */ /* 移除，由父级gap控制 */
+        display: flex; /* 让内部标签横向排列 */
+        flex-wrap: wrap;
+        gap: 5px; /* 标签之间的间距 */
+    }
+    .series-genre-tag {
+        font-size: 0.75em;
+        color: var(--text-color);
+        background-color: #4a4a4a; /* 更深的灰色或自定义颜色 */
+        padding: 3px 8px;
+        border-radius: 3px;
+        /* margin-right: 5px; */ /* 移除，由父级gap控制 */
+        /* margin-bottom: 3px; */ /* 移除，由父级gap控制 */
+        white-space: nowrap;
+        display: inline-block;
+    }
+    /* --- End of Styles for Series View --- */
+
+    #genericPersonStudioViewPage,
+    #numberViewPage { /* 确保其他类似视图页也应用此宽度 */
+      width: 70%;            
+      margin-left: auto;     
+      margin-right: auto;    
+    }
+
+    .search-mode-button {
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      padding: 8px 12px;
+      border: none;
+      border-radius: 20px; /* Make it round like the input */
+      cursor: pointer;
+      margin-left: 5px; /* Space between input and button */
+      transition: background-color var(--transition-speed), color var(--transition-speed);
+      font-size: 1.2em; /* Adjust icon size */
+      line-height: 1; /* For better icon alignment */
+      display: inline-flex; /* To center icon vertically */
+      align-items: center;
+      justify-content: center;
+    }
+    .search-mode-button:hover {
+      background-color: var(--hover-color);
+    }
+    .search-mode-button.active {
+      background-color: var(--accent-color);
+      color: var(--bg-color); /* Contrasting color when active */
+    }
+
+    /* NEW: Style for search input when unique ID mode is active */
+    .search-input.unique-id-mode {
+      border: 1px solid var(--accent-color); /* Highlight border */
+      box-shadow: 0 0 5px var(--accent-color);
+    }
+/* --- MOBILE ADAPTATION --- */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px; /* Slightly smaller base font for mobile */
+    }
+
+    /* Navbar */
+    .navbar {
+        flex-direction: column; /* Stack elements */
+        align-items: flex-start; /* Align to start */
+        padding: 10px 15px;
+    }
+    .navbar-left-section {
+        width: 100%;
+        justify-content: space-between; /* Keep brand left, logout right */
+        margin-bottom: 10px;
+    }
+    .navbar-brand {
+        font-size: 1.3em;
+    }
+    .navbar-nav {
+        gap: 10px; /* Reduce gap */
+        width: 100%; /* Take full width */
+        justify-content: center; /* Center nav items */
+        margin-bottom: 10px;
+        flex-wrap: wrap; /* Allow nav items to wrap */
+    }
+    .navbar-nav li a {
+        padding: 5px 8px;
+        font-size: 0.9em;
+    }
+    .search-box {
+        width: 100%; /* Full width */
+        margin-left: 0;
+    }
+    .search-input {
+        flex-grow: 1; /* Allow input to take available space */
+        /* width: calc(100% - 50px); Removed, flex-grow is better */
+    }
+    .search-mode-button {
+        font-size: 1.1em; /* Slightly smaller */
+        padding: 8px 10px;
+    }
+
+
+    /* Library Filters */
+    .library-filters {
+        padding: 10px 15px;
+        gap: 8px;
+        justify-content: center;
+    }
+    .library-filter {
+        padding: 4px 8px;
+        font-size: 0.9em;
+    }
+
+    /* Tag Dropdown */
+    .tag-dropdown {
+        right: 10px; /* Closer to edge */
+        top: calc(25%); /* Adjust vertical position */
+    }
+    .tag-btn {
+        font-size: 1.3em;
+        padding: 4px 8px;
+    }
+    .tag-panel {
+        width: 280px; /* Narrower */
+        grid-template-columns: repeat(2, 1fr); /* 2 columns */
+        max-height: 50vh; /* Limit height more on mobile */
+        font-size: 0.9em;
+    }
+
+    /* Random Carousel */
+    .random-carousel .section-title {
+        font-size: 1.3em;
+        padding-left: 15px !important; /* Override inline style if present */
+        margin-bottom: 5px;
+    }
+    .random-carousel .carousel-slide {
+        gap: 10px;
+    }
+    .random-carousel .carousel-item {
+        width: 180px; /* Smaller items, adjust for ~2 visible */
+        height: 101px; /* 16:9 for 180px width */
+    }
+    .random-carousel .carousel-item-title {
+        font-size: 0.8em;
+        padding: 5px 8px;
+        line-height: 1.3;
+    }
+
+    /* Sort Container */
+    .sort-container {
+        padding: 10px 15px;
+        gap: 8px;
+        justify-content: center; /* Center buttons when they wrap */
+    }
+    .sort-button {
+        padding: 6px 10px;
+        font-size: 0.9em;
+    }
+
+    /* Main Container and Homepage Grid */
+    .container {
+        padding: 0 10px 10px 10px; /* Reduced padding */
+    }
+    .section-title { /* General section titles */
+        font-size: 1.5em;
+        margin-bottom: 10px;
+        padding-left: 0;
+    }
+    /* Specifically target homepage grid if it's inside #homepage .container */
+    #homepage .carousel-grid, 
+    #contentArea .carousel-grid { /* Also target grid inside contentArea for search/filtered views */
+        grid-template-columns: repeat(3, 1fr); /* 3 items per row */
+        gap: 10px; /* Reduce gap between items */
+        width: 100%; /* Use full available width within container padding */
+        margin: 0; /* Remove auto margins if any */
+    }
+    .carousel-item { /* General card items */
+        /* Height will be determined by aspect-ratio of image */
+         border-left-width: 3px; /* Thinner border for mobile */
+    }
+    .carousel-item img {
+        /* aspect-ratio: 2 / 3; is good */
+    }
+    .carousel-item-title {
+        font-size: 0.8em; /* Smaller title text */
+        height: 2.8em; /* Adjust for smaller font */
+        padding: 6px;
+    }
+    .carousel-item.liked-item .carousel-item-title {
+      color: #333; /* Maintain readability */
+    }
+
+
+    /* Pagination */
+    .pagination {
+        gap: 5px;
+        margin-top: 20px;
+        flex-wrap: wrap; /* Allow wrapping if too wide */
+        justify-content: center;
+    }
+    .page-button,
+    .page-input,
+    .page-info {
+        padding: 6px 10px;
+        font-size: 0.9em;
+    }
+    .page-input {
+        width: 50px;
+    }
+
+    /* Video Detail Hover Card */
+    .video-detail-page { /* Hover card */
+        width: 90vw; /* Max width for hover card on mobile */
+        max-width: 300px; /* Cap it */
+        /* JS handles positioning, but this affects width calculation */
+    }
+    .video-detail-container {
+        padding: 10px;
+    }
+    .video-detail-backdrop {
+        max-width: 80px; /* Smaller image for hover card */
+        margin-right: 10px;
+    }
+    .video-detail-title {
+        font-size: 1em; /* Default for hover */
+        margin-bottom: 5px;
+    }
+    .video-detail-title.long-title {
+        font-size: 0.85em; /* Smaller if long for hover */
+    }
+    .video-detail-info {
+        font-size: 0.75em; /* Smaller font for hover */
+        margin-bottom: 4px;
+    }
+    .video-detail-info span {
+        margin-right: 8px;
+    }
+    .video-detail-overview {
+        font-size: 0.7em; /* Smaller font for hover */
+        line-height: 1.4;
+        max-height: 60px; /* Limit overview height in hover card */
+        padding-top: 5px;
+    }
+
+    /* Generic View Page (Actors, Directors, Studios) */
+    #genericPersonStudioViewPage,
+    #actorsViewPage { /* Ensure #actorsViewPage is covered if it's a separate older ID */
+        width: 95%;
+        padding-top: 15px;
+    }
+    .actor-sort-controls {
+        justify-content: center;
+    }
+    .actor-list-container {
+        max-height: 90px; /* Approx 2-3 rows of smaller items */
+        justify-content: center;
+    }
+    .actor-list-container.expanded {
+       max-height: 300px; /* Adjust as needed */
+    }
+    .actor-list-item {
+        padding: 4px 10px;
+        font-size: 0.85em;
+    }
+    .expand-button {
+        padding: 6px 12px;
+        font-size: 0.9em;
+    }
+    .actor-detail-item {
+        flex-direction: column; /* Stack image and movies */
+        align-items: center; /* Center items when stacked */
+    }
+    .actor-detail-image {
+        width: 80px; /* Smaller image */
+        height: 120px;
+        min-width: 80px;
+        min-height: 120px;
+        margin-bottom: 10px; /* Space when stacked */
+    }
+    .actor-movies-scrollable {
+        width: 100%; /* Full width when stacked */
+        min-height: 150px;
+    }
+    .actor-movie-poster {
+        width: 100px; /* Smaller posters */
+        height: 150px;
+        margin-right: 10px;
+    }
+
+    /* Series View Page */
+    .series-view-page {
+        width: 95%; 
+        padding-top: 15px;
+    }
+    .series-view-page > .section-title {
+        font-size: 1.5em;
+    }
+    .series-summary-controls {
+        flex-direction: column;
+        align-items: center;
+    }
+    .series-summary-controls > div { /* Sort button container */
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .series-item {
+        padding: 12px 15px;
+    }
+    .series-item-header {
+        /* flex-wrap: wrap; */ /* might cause button to jump down too easily */
+        align-items: flex-start; /* Better for long titles */
+    }
+    .series-item-name {
+        font-size: 1.1em;
+        margin-right: 10px;
+    }
+    .series-item-name .series-movie-count,
+    .series-genre-tag {
+        font-size: 0.75em;
+    }
+     .series-item-details-line {
+        gap: 5px;
+    }
+    .series-genre-tag {
+        padding: 2px 5px;
+    }
+    .series-item-expand-btn {
+        padding: 6px 10px;
+        font-size: 0.85em;
+        min-width: 70px; /* Shorter button */
+        margin-left: auto; /* Push to right if name is short */
+    }
+    .series-movies-container {
+        min-height: 200px; /* Adjust based on new poster size */
+    }
+    .series-movie-item-wrapper {
+        width: 100px; /* Match poster width */
+        margin-right: 10px;
+    }
+    .series-movies-container .actor-movie-poster { /* Reusing .actor-movie-poster */
+        width: 100px; 
+        height: 150px; 
+    }
+    .series-movie-actor-name {
+        font-size: 0.7em;
+    }
+
+    /* Number View Page */
+    #numberViewPage {
+        width: 95%;
+        padding-top: 15px;
+    }
+    /* Manual input section in Number View */
+    #numberViewPage > div[style*="margin-bottom: 20px"] { /* Targeting the manual input div */
+        flex-direction: column;
+        align-items: stretch !important; /* Make input/button full width */
+    }
+    #manualNumberPrefixInput {
+        width: 100% !important; /* Override inline style */
+        margin-bottom: 10px;
+    }
+    #manualNumberSearchBtn {
+         width: 100%;
+         padding: 8px 15px !important; /* Ensure padding override */
+    }
+    #numberPrefixListContainer {
+        justify-content: center; /* Center prefixes if they wrap */
+    }
+    /* #numberPrefixListContainer .actor-list-item already covered by .actor-list-item mobile */
+}
+  </style>
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <nav class="navbar">
+    <div class="navbar-left-section"> 
+      <a href="#" class="navbar-brand" onclick="resetAndShowHome(); return false;">FBIwarning</a>
+
+      <a href="{{ url_for('logout_route') }}" class="logout-button-small" title="退出登录">🚪</a>
+
+    </div>
+
+    <ul class="navbar-nav"> <!-- 中间导航项保持不变 -->
+      <li><a href="#" onclick="resetAndShowHome(); return false;">首页</a></li>
+      <li><a href="#" onclick="filterMovieType('Movie'); return false;">电影</a></li>
+      <li><a href="#" onclick="filterMovieType('Series'); return false;">剧集</a></li>
+	  <li><a href="#" onclick="navigateToMangaHome(); return false;">漫画</a></li>
+    </ul
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索影片、演员、系列...">
+						<button class="search-mode-button" id="searchByIdBtn" title="切换到番号搜索模式">🆔</button> 
+    </div>
+  </nav>
+
+  <!-- 媒体库过滤区域 -->
+  <div class="library-filters" id="libraryFilters">
+    <!-- 过滤项由JS加载 -->
+  </div>
+
+  <!-- 标签下拉 -->
+  <div class="tag-dropdown">
+    <button class="tag-btn" id="tagBtn" title="按类型筛选">🏷️</button>
+    <div class="tag-panel" id="tagPanel">
+      <!-- 标签选项由JS加载，3列排列 -->
+    </div>
+  </div>
+
+  <!-- 随机推荐轮播图（评分≥8且使用 Backdrop 缩略图） -->
+  <div class="random-carousel" id="randomCarousel">
+    <h2 class="section-title" style="padding-left: 20px; margin-bottom: 0;">高分推荐</h2>
+    <div class="carousel-slide" id="carouselSlide">
+      <!-- 随机推荐项目由JS加载 -->
+      <div class="loading-indicator">加载推荐中...</div>
+    </div>
+  </div>
+
+  <!-- 主体区域 -->
+  <div class="container" id="homepage">
+    <div class="sort-container" id="sortContainer">
+      <button class="sort-button" data-sort="SortName" data-order="Ascending" onclick="setSort('SortName', this)">标题</button>
+      <button class="sort-button" data-sort="DateCreated" data-order="Descending" onclick="setSort('DateCreated', this)">入库时间</button>
+      <button class="sort-button" data-sort="PremiereDate" data-order="Descending" onclick="setSort('PremiereDate', this)">上映时间</button>
+      <button class="sort-button" data-sort="CommunityRating" data-order="Descending" onclick="setSort('CommunityRating', this)">评分</button>
+      <button class="sort-button" data-sort="RunTimeTicks" data-order="Descending" onclick="setSort('RunTimeTicks', this)">时长</button>
+	  <button class="sort-button" id="actorsViewBtn" onclick="showGenericView('actor')">演员</button>
+	  <button class="sort-button" id="directorsViewBtn" onclick="showGenericView('director')">导演</button>
+	  <button class="sort-button" id="studiosViewBtn" onclick="showGenericView('studio')">工作室</button>
+	  <button class="sort-button" id="numberViewBtn" onclick="showNumberView()">番号</button>
+	  <button class="sort-button" id="seriesViewBtn" onclick="showSeriesView()">系列</button>
+	</div>
+    <div id="contentArea">
+      <div class="loading-indicator">加载内容中...</div>
+    </div>
+  </div>
+
+  <!-- NEW: Generic View Page for Actors, Directors, Studios -->
+  <div class="container" id="genericPersonStudioViewPage" style="display: none;">
+    <h2 class="section-title" id="genericViewTitle">列表</h2>
+    <div class="actor-sort-controls"> <!-- Keep class for styling -->
+      <button class="sort-button active" id="sortActorsByCount" onclick="sortGenericItems('movieCount')">按作品数量排序</button> <!-- onclick changed -->
+      <button class="sort-button" id="sortActorsByName" onclick="sortGenericItems('name')">按名称排序</button> <!-- onclick changed -->
+    </div>
+    <div id="genericListContainer" class="actor-list-container"> <!-- Keep class for styling -->
+      <!-- Generic items will be loaded here -->
+      <div class="loading-indicator">加载列表中...</div>
+    </div>
+    <button id="genericExpandListBtn" class="expand-button" onclick="toggleGenericListExpansion()" style="display: none;">↓展开↓</button> <!-- onclick changed -->
+
+    <div id="genericDetailsContainer" class="actor-details-container"> 
+      <!-- Generic item details (image + movie posters) will be loaded here -->
+    </div>
+  </div>
+  <!-- End of Generic View Page -->
+		<!-- NEW: Number View Page -->
+		<div class="container" id="numberViewPage" style="display: none;">
+			<h2 class="section-title" id="numberViewTitle">番号列表</h2>
+			<!-- NEW Manual Input Section -->
+			<div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center;">
+				<input type="text" id="manualNumberPrefixInput" class="search-input" placeholder="手动输入番号前缀..." style="width: 250px;">
+				<button id="manualNumberSearchBtn" class="sort-button" style="padding: 8px 15px;">搜索</button>
+			</div>
+			<!-- Container for prefix list - reuse styling but adjust overflow/height -->
+			<div id="numberPrefixListContainer" class="actor-list-container" style="max-height: none; overflow: visible; margin-bottom: 30px;">
+				<!-- Prefix items will be loaded here -->
+				<div class="loading-indicator">加载番号前缀及数量中...</div>
+			</div>
+
+			<!-- Container for search results -->
+			<div id="numberResultsContainer" style="min-height: 200px;">
+				<!-- Search results will appear here -->
+				<p style="text-align: center; color: var(--secondary-text); padding-top: 50px;">点击上方番号前缀进行搜索。</p>
+			</div>
+		</div>
+		<!-- End of Number View Page -->
+
+  <!-- 视频详情页 (悬停卡片) -->
+  <div class="video-detail-page" id="videoDetailPageHoverCard">
+      <!-- Content dynamically loaded by JS for hover card -->
+  </div>
+
+	<!-- NEW: Series View Page -->
+	<div class="series-view-page" id="seriesViewPage" style="display: none;"> <!-- MODIFIED: Removed duplicate .container class -->
+		<h2 class="section-title" id="seriesViewTitle">系列列表</h2>
+		<div class="series-summary-controls"> <!-- MODIFIED: style moved to CSS -->
+			<span id="seriesTotalCountSpan">总共获取了 0 个系列</span>
+			<div>
+				<button class="sort-button" id="sortSeriesByCountBtn" onclick="setSeriesSort('movieCount')">按影片数量</button>
+				<button class="sort-button" id="sortSeriesByNameBtn" onclick="setSeriesSort('name')">按系列名称</button>
+			</div>
+		</div>
+		<div id="seriesListContainer" style="clear: both;">
+			<!-- Series items will be loaded here -->
+			<div class="loading-indicator">加载系列中...</div>
+		</div>
+    </div>
+
+  <!-- 分页 -->
+   <div class="pagination" id="pagination">
+       <button class="page-button" id="prevPage" onclick="prevPage()">上一页</button>
+       <span class="page-info" id="pageInfo">第 1 页</span>
+       <input type="number" class="page-input" id="currentPageInput" value="1" min="1" title="输入页码按回车跳转">
+       <button class="page-button" id="nextPage" onclick="nextPage()">下一页</button>
+  </div>
+	<!-- 占位内容, 防止分页条遮挡底部内容 -->
+	<div style="height: 50px;"></div>
+
+
+<script>
+// ====================================================================================
+// JAVASCRIPT - 主要修改部分
+// ====================================================================================
+
+// --- 全局API配置 ---
+const MOVIE_API_BASE_URL = '/api_movies'; // Flask后端电影API (相对路径)
+// const MANGA_API_BASE_URL = '/api'; // Flask后端漫画API (如果需要)
+
+// --- DOM Elements ---
+const searchInput = document.getElementById('searchInput');
+const carouselSlide = document.getElementById('carouselSlide');
+const contentArea = document.getElementById('contentArea');
+const videoDetailPageHoverCardDiv = document.getElementById('videoDetailPageHoverCard'); 
+const paginationDiv = document.getElementById('pagination');
+const currentPageInput = document.getElementById('currentPageInput');
+const pageInfoSpan = document.getElementById('pageInfo');
+const tagPanel = document.getElementById('tagPanel');
+const tagBtn = document.getElementById('tagBtn');
+const libraryFiltersDiv = document.getElementById('libraryFilters');
+const prevPageBtn = document.getElementById('prevPage');
+const nextPageBtn = document.getElementById('nextPage');
+const homepage = document.getElementById('homepage'); 
+const seriesViewPage = document.getElementById('seriesViewPage');
+const seriesListContainer = document.getElementById('seriesListContainer');
+const seriesTotalCountSpan = document.getElementById('seriesTotalCountSpan');
+const genericViewPage = document.getElementById('genericPersonStudioViewPage');
+const genericViewTitle = document.getElementById('genericViewTitle');
+const genericListContainer = document.getElementById('genericListContainer');
+const genericExpandListBtn = document.getElementById('genericExpandListBtn');
+const genericDetailsContainer = document.getElementById('genericDetailsContainer');
+const genericSortByCountBtn = document.getElementById('sortActorsByCount'); // Ensure this ID exists if used
+const genericSortByNameBtn = document.getElementById('sortActorsByName');   // Ensure this ID exists if used
+const numberViewPage = document.getElementById('numberViewPage');
+const numberPrefixListContainer = document.getElementById('numberPrefixListContainer');
+const numberResultsContainer = document.getElementById('numberResultsContainer');
+const searchByIdBtn = document.getElementById('searchByIdBtn'); // NEW
+
+// --- 全局状态设置 (电影库相关) ---
+let currentView = 'homepage'; 
+let currentSortBy = 'DateCreated'; 
+let currentSortOrder = 'Descending';
+let currentPage = 1;
+let pageSize = 100; 
+let totalItems = 0;
+let totalPages = 1;
+let movieGenres = []; 
+let selectedMovieTags = []; 
+let movieLibraries = []; 
+let selectedMovieLibraries = []; 
+let currentSearchTerm = '';
+let currentContentTypeFilter = ''; 
+
+let carouselInterval = null;
+const CAROUSEL_SCROLL_INTERVAL = 4000;
+let currentCarouselIndex = 0;
+let isCarouselPaused = false;
+
+let allFilteredWorksData = []; 
+let currentGenericViewConfig = null; 
+let allGenericData = []; 
+let genericSortBy = 'movieCount'; // Default sort for generic views
+let genericSortOrder = 'Descending';// Default order for generic views
+let isGenericListExpanded = false;
+let selectedGenericIds = new Set(); 
+let isFilteredWorksViewActive = false; 
+let filteredWorksConfig = { type: null, id: null, name: null };
+let isUniqueIdSearchMode = false;
+
+const numberPrefixes = [ 
+    "ABW", "ABF", "ABP", "AMBI", "CAWD", "DASD", "DASS", "DVAJ", "DAVK", "EBOD", "EBWH", "EKDV", "FSDSS", "FOCS", "GVH", "HND", "HMN", "HSODA", "HUBLK", "HUNBL", "HUNTA", "HUNTB", "HUNTC", "IPX", "IPZZ", "JUFE", "KAWD", "KTRA", "LULU", "MEYD",
+    "MIAA","MIAB", "MIAE", "MIDE", "MIDV", "MIDA", "MIFD", "MILK", "MIMK",
+    "MIRD", "MISM", "MKMP", "MKON", "MTALL", "MUDR", "MUKC", "MUKD", "MUM", "MVG", "MVSD","NHDTB","PFES","PIYO","PPPE", "PRED", "REAL", "RKI", "ROYD", "SAME",
+    "STARS", "SDAB", "START", "SDDE", "SDMF", "STSK", "SDJS", "SNIS", "SSNI", "SSIS", "SONE", "SORA", "SQTE", "SUN", "WANZ", "WAAA"
+];
+
+const viewConfigs = { 
+    actor: { type: 'actor', title: '演员', itemField: 'People', subTypeField: 'Type', subTypeValue: 'Actor', apiQueryParam: 'personIds', itemImageField: 'PrimaryImageTag', embyLinkType: 'personId', placeholderName: '演员', placeholderItemName: '影片', targetUrl: '/actors_view_page' },
+    director: { type: 'director', title: '导演', itemField: 'People', subTypeField: 'Type', subTypeValue: 'Director', apiQueryParam: 'personIds', itemImageField: 'PrimaryImageTag', embyLinkType: 'personId', placeholderName: '导演', placeholderItemName: '作品', targetUrl: '/directors_view_page' },
+    studio: { type: 'studio', title: '工作室', itemField: 'Studios', subTypeField: null, subTypeValue: null, apiQueryParam: 'studioIds', itemImageField: null, embyLinkType: 'studioId', placeholderName: '工作室', placeholderItemName: '作品', targetUrl: '/studios_view_page' }
+};
+
+// ##########################################################################
+// START OF MODIFIED SECTION: DOMContentLoaded and navigateToMangaHome
+// ##########################################################################
+window.addEventListener('DOMContentLoaded', () => {
+    const containerPaddingHorizontal = 40; // 20px left + 20px right for .container
+    const gridCssPercentageWidth = 0.8;
+    const estimatedGridWidth = (window.innerWidth - containerPaddingHorizontal) * gridCssPercentageWidth;
+    const minCardWidthCss = 180;
+    const gapCss = 20;
+    const cardsPerRow = Math.max(1, Math.floor((estimatedGridWidth + gapCss) / (minCardWidthCss + gapCss)));
+    window.pageSize = getOptimizedPageSize(100, cardsPerRow);
+    console.log(`Dynamically calculated: Cards per row: ${cardsPerRow}, Optimal pageSize: ${window.pageSize}`);
+    // ---- NEW pageSize LOGIC ----
+    if (window.innerWidth <= 768) { // Mobile breakpoint consistent with CSS
+        window.pageSize = 3 * 20; // 3 columns * 20 rows = 60 items
+        console.log(`Mobile: pageSize set to ${window.pageSize}`);
+    } else {
+        // Original desktop calculation (or a fixed desktop pageSize)
+        const containerPaddingHorizontalDesktop = 40; // For .container
+        const gridCssPercentageWidthDesktop = 0.8;    // For .carousel-grid width: 80%
+        const estimatedGridWidthDesktop = (window.innerWidth - containerPaddingHorizontalDesktop) * gridCssPercentageWidthDesktop;
+        const minCardWidthCssDesktop = 180;           // From grid-template-columns: minmax(180px, 1fr)
+        const gapCssDesktop = 20;                     // From .carousel-grid gap
+        const cardsPerRowDesktop = Math.max(1, Math.floor((estimatedGridWidthDesktop + gapCssDesktop) / (minCardWidthCssDesktop + gapCssDesktop)));
+        window.pageSize = getOptimizedPageSize(100, cardsPerRowDesktop); // Original target 100, adjust per row
+        console.log(`Desktop: Cards per row: ${cardsPerRowDesktop}, Optimal pageSize: ${window.pageSize}`);
+    }
+    initializeMoviePageWithRouting();
+
+    document.addEventListener('click', (event) => {
+        if (tagPanel.classList.contains('active') &&
+            !tagPanel.contains(event.target) &&
+            !tagBtn.contains(event.target)) {
+            tagPanel.classList.remove('active');
+        }
+    });
+
+    // MODIFIED: Search input listener to call handleGlobalSearch
+    searchInput.addEventListener('input', debounce(() => {
+        currentSearchTerm = searchInput.value.trim();
+        currentPage = 1; // Reset page on new search
+        handleGlobalSearch();
+    }, 500));
+
+    // NEW: Unique ID search button listener
+    if (searchByIdBtn) {
+        searchByIdBtn.addEventListener('click', toggleUniqueIdSearchMode);
+    }
+
+    currentPageInput.addEventListener('change', () => {
+        let pageNumber = parseInt(currentPageInput.value, 10);
+        if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber >= 1) { // Fixed condition: pageNumber >= 1
+            currentPage = pageNumber;
+            // NEW: Differentiate between filtered works and fuzzy unique ID search when rendering page
+            if (isFilteredWorksViewActive) {
+                renderFilteredWorksCurrentPage();
+            } else if (currentView === 'uniqueIdSearch') { // NEW
+                fetchFuzzyUniqueIdMovies(); // NEW
+            } else if (currentView === 'homepage') {
+                fetchHomePageData();
+            }
+        } else {
+            currentPageInput.value = currentPage;
+        }
+    });
+    currentPageInput.addEventListener('keyup', (event) => {
+        if (event.key === 'Enter') {
+            currentPageInput.dispatchEvent(new Event('change'));
+        }
+    });
+
+    const manualNumberInput = document.getElementById('manualNumberPrefixInput');
+    const manualNumberSearchButton = document.getElementById('manualNumberSearchBtn');
+    if (manualNumberInput && manualNumberSearchButton) {
+        manualNumberSearchButton.addEventListener('click', () => {
+            const prefix = manualNumberInput.value.trim();
+            if (prefix) {
+                document.querySelectorAll('#numberPrefixListContainer .actor-list-item.active').forEach(el => el.classList.remove('active'));
+                // MODIFIED: Pass global search term to number search
+                searchByNumberPrefix(prefix);
+            } else {
+                numberResultsContainer.innerHTML = '<p style="text-align: center; color: var(--secondary-text); padding-top: 50px;">请输入番号前缀进行搜索。</p>';
+            }
+        });
+        manualNumberInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') { event.preventDefault(); manualNumberSearchButton.click(); }
+        });
+    }
+    window.addEventListener('popstate', (event) => {
+        console.log("Popstate event, path:", window.location.pathname, "hash:", window.location.hash, "state:", event.state);
+        handlePathChange(window.location.pathname, window.location.hash, event.state);
+    });
+
+    window.addEventListener('hashchange', () => {
+        console.log("Hashchange event, new hash:", window.location.hash);
+        handlePathChange(window.location.pathname, window.location.hash, history.state);
+    });
+});
+
+    function getOptimizedPageSize(target, perRow) {
+        if (perRow <= 0) return target; // Avoid division by zero or infinite loop
+        let lower = target, upper = target;
+        while (true) { // Loop indefinitely until a condition is met or bounds are exceeded
+            if (lower > 0) {
+                if (lower % perRow === 0) return lower;
+            } else {
+                if (upper % perRow === 0 && upper <= target + perRow*2) return upper; 
+                return Math.max(perRow, Math.round(target / perRow) * perRow); 
+            }
+
+            if (upper < target * 1.5) { 
+                 if (upper % perRow === 0) return upper;
+            } else {
+                const roundedTargetMultiple = Math.round(target / perRow) * perRow;
+                return Math.max(perRow, roundedTargetMultiple > 0 ? roundedTargetMultiple : perRow);
+            }
+
+            lower--;
+            upper++;
+            if (lower < perRow && upper > target * 1.5 + perRow) { 
+                 const fallback = Math.round(target / perRow) * perRow;
+                 return Math.max(perRow, fallback > 0 ? fallback : perRow);
+            }
+        }
+    }
+
+
+function navigateToMangaHome() {
+    window.location.href = '/manga_home';
+}
+
+async function initializeMoviePageWithRouting() {
+    updateSortButtonsUI();
+    await fetchLocalMovieLibraries();
+    await fetchLocalMovieGenres();
+    
+    handlePathChange(window.location.pathname, window.location.hash, history.state);
+}
+
+async function handlePathChange(path, hash, state) {
+    console.log("Handling path change for:", path, "Hash:", hash);
+
+    genericViewPage.style.display = 'none';
+    numberViewPage.style.display = 'none';
+    seriesViewPage.style.display = 'none';
+    homepage.style.display = 'none';
+
+    isUniqueIdSearchMode = false;
+    searchByIdBtn.classList.remove('active');
+    searchInput.classList.remove('unique-id-mode');
+    searchInput.placeholder = '搜索影片、演员、系列...';
+
+
+    if (hash) {
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const genreFilter = hashParams.get('genre');
+        const studioFilter = hashParams.get('studio');
+        const directorFilter = hashParams.get('director');
+		const actorFilter = hashParams.get('actor');
+        const seriesNameFilter = hashParams.get('seriesName'); // Handle seriesName from hash
+
+        if (genreFilter) {
+            console.log("Found genre filter in hash:", genreFilter);
+            await resetAndShowHome();
+            selectedMovieTags = [genreFilter];
+            document.getElementById('tagBtn').click(); // Open tag panel to show selection
+            renderTagPanel();
+            await fetchHomePageData();
+            history.replaceState(null, document.title, window.location.pathname); // Clear hash
+            return;
+        } else if (studioFilter || directorFilter || actorFilter) {
+			const type = studioFilter ? 'studio' : (directorFilter ? 'director' : 'actor');
+			const filterValue = studioFilter || directorFilter || actorFilter;
+            console.log(`Found ${type} filter in hash:`, filterValue);
+            await showGenericView(type, false); // false to not update history again
+            if (allGenericData.length === 0) await loadGenericData();
+            const itemToSelect = allGenericData.find(item => item.name === filterValue);
+            if (itemToSelect) {
+                selectedGenericIds.clear(); selectedGenericIds.add(itemToSelect.id);
+                renderGenericList(); await updateGenericDetails();
+            }
+            history.replaceState(null, document.title, window.location.pathname); // Clear hash
+            return;
+        } else if (seriesNameFilter) {
+            console.log("Found seriesName filter in hash:", seriesNameFilter);
+            await showSeriesView(false); // false to not update history again
+            // Try to find and expand the series. loadAllSeriesData() will be called by showSeriesView.
+            // We might need to wait for allSeriesData to populate.
+            const checkSeriesInterval = setInterval(async () => {
+                if (allSeriesData.length > 0) {
+                    clearInterval(checkSeriesInterval);
+                    const seriesToExpand = allSeriesData.find(s => s.name === seriesNameFilter);
+                    if (seriesToExpand) {
+                        console.log(`Pre-expanding series from hash: ${seriesToExpand.name}`);
+                        await toggleSeriesExpansion(seriesToExpand.id, true); // Force expand
+                         // Scroll to the expanded series
+                        const safeSuffix = generateSafeIdSuffixForSeries(seriesToExpand);
+                        const seriesElement = document.getElementById(`series-item-${safeSuffix}`);
+                        if (seriesElement) {
+                            seriesElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    } else {
+                        console.warn(`Series "${seriesNameFilter}" from hash not found.`);
+                    }
+                }
+            }, 100);
+            setTimeout(() => clearInterval(checkSeriesInterval), 5000); // Timeout for safety
+            history.replaceState(null, document.title, window.location.pathname); // Clear hash
+            return;
+        }
+    }
+
+    // Path based routing
+    if (path === '/' || path === '/movies_home') {
+        await resetAndShowHome();
+    } else if (path === '/actors_view_page') {
+        await showGenericView('actor', false);
+    } else if (path === '/directors_view_page') {
+        await showGenericView('director', false);
+    } else if (path === '/studios_view_page') {
+        await showGenericView('studio', false);
+    } else if (path === '/series_view_page') {
+        await showSeriesView(false);
+    } else if (path === '/numbers_view_page') {
+        await showNumberView(false); 
+    } else {
+        console.warn(`Path ${path} not specifically handled by movie SPA router, defaulting to home.`);
+        await resetAndShowHome();
+    }
+}
+
+
+
+
+function updateURL(path, title, newHash = '') {
+    const currentPath = window.location.pathname;
+    const currentHash = window.location.hash;
+    const targetFullUrl = path + (newHash ? `#${newHash}` : ''); 
+    if ((currentPath + currentHash) !== targetFullUrl) {
+        history.pushState({ view: currentView, hash: newHash }, title, targetFullUrl);
+        console.log("URL updated to:", targetFullUrl);
+    }
+}
+// ##########################################################################
+// END OF MODIFIED SECTION
+// ##########################################################################
+
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => { clearTimeout(timeout); func(...args); };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+async function initializeMoviePage() { 
+    updateSortButtonsUI();
+    await fetchLocalMovieLibraries(); 
+    await fetchLocalMovieGenres();    
+    
+    showRandomMovieRecommendations();
+    fetchHomePageData(); 
+}
+
+function resetAndShowHome() {
+    console.log("Resetting to home view.");
+    currentView = 'homepage';
+    selectedMovieLibraries = [];
+    selectedMovieTags = [];
+    currentSearchTerm = '';
+    currentContentTypeFilter = '';
+    searchInput.value = '';
+    currentPage = 1;
+    currentSortBy = 'DateCreated';
+    currentSortOrder = 'Descending';
+
+    isUniqueIdSearchMode = false; 
+    searchByIdBtn.classList.remove('active');
+    searchInput.classList.remove('unique-id-mode');
+    searchInput.placeholder = '搜索影片、演员、系列...';
+
+
+    updateSortButtonsUI();
+    renderLibraryFilters();
+    renderTagPanel();
+
+    genericViewPage.style.display = 'none';
+    numberViewPage.style.display = 'none';
+    seriesViewPage.style.display = 'none';
+    videoDetailPageHoverCardDiv.style.display = 'none';
+    const filteredTitle = document.getElementById('filteredWorksTitle');
+    if (filteredTitle) filteredTitle.style.display = 'none';
+
+    homepage.style.display = 'block';
+    paginationDiv.style.display = 'flex';
+    contentArea.style.display = 'block';
+
+    if (currentGenericViewConfig) {
+        isGenericListExpanded = false;
+        if (genericListContainer) genericListContainer.classList.remove('expanded');
+        if (genericExpandListBtn) { genericExpandListBtn.textContent = '↓展开↓'; genericExpandListBtn.style.display = 'none'; }
+        selectedGenericIds.clear();
+        currentGenericViewConfig = null;
+    }
+    isFilteredWorksViewActive = false;
+    allFilteredWorksData = [];
+
+    if (window.location.pathname !== '/' && window.location.pathname !== '/movies_home' || window.location.hash !== '') {
+        updateURL('/movies_home', '电影首页');
+    }
+
+    document.getElementById('randomCarousel').style.display = 'block';
+    libraryFiltersDiv.style.display = 'flex'; 
+    tagBtn.style.display = 'block';
+
+
+    showRandomMovieRecommendations();
+    fetchHomePageData();
+}
+
+function filterMovieType(type) { 
+    currentContentTypeFilter = type;
+    currentPage = 1;
+    resetAndShowHome(); 
+}
+
+tagBtn.addEventListener('click', (event) => {
+  event.stopPropagation();
+  tagPanel.classList.toggle('active');
+});
+
+function renderTagPanel() { 
+  tagPanel.innerHTML = '';
+  const allOptionDiv = createTagOption('全部类型', selectedMovieTags.length === 0 || selectedMovieTags.includes('全部类型'));
+  tagPanel.appendChild(allOptionDiv);
+
+  movieGenres.forEach(genre => { 
+    if (genre.Name !== '全部类型') { 
+        const optionDiv = createTagOption(genre.Name, selectedMovieTags.includes(genre.Name));
+        tagPanel.appendChild(optionDiv);
+    }
+  });
+}
+
+function createTagOption(tagText, isChecked) { 
+    const optionDiv = document.createElement('div');
+    optionDiv.classList.add('tag-option');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    const uniqueId = `movie-tag-${tagText.replace(/[^a-zA-Z0-9]/g, '-')}`;
+    checkbox.id = uniqueId;
+    checkbox.value = tagText;
+    checkbox.checked = isChecked;
+    checkbox.addEventListener('change', (e) => {
+      toggleMovieTagFilter(tagText, e.target.checked);
+    });
+    const label = document.createElement('label');
+    label.setAttribute('for', uniqueId);
+    label.textContent = tagText;
+    optionDiv.appendChild(checkbox);
+    optionDiv.appendChild(label);
+    return optionDiv;
+}
+
+function toggleMovieTagFilter(tag, isChecked) {
+  let currentTags = new Set(selectedMovieTags.filter(t => t !== '全部类型'));
+  if (tag === '全部类型') {
+    selectedMovieTags = isChecked ? ['全部类型'] : [];
+  } else {
+    if (isChecked) currentTags.add(tag);
+    else currentTags.delete(tag);
+    selectedMovieTags = Array.from(currentTags);
+  }
+  renderTagPanel();
+  currentPage = 1;
+  fetchHomePageData(); 
+}
+
+async function showRandomMovieRecommendations() {
+  carouselSlide.innerHTML = '<div class="loading-indicator">加载推荐中...</div>';
+  try {
+    const fetchOptions = {
+      startIndex: 0,
+      limit: 50, 
+      SortBy: 'CommunityRating', 
+      SortOrder: 'Descending',
+    };
+    const allItems = await fetchLocalMediaItems(fetchOptions); 
+    let items = Array.isArray(allItems) ? allItems : (allItems.Items || []);
+    items = items.filter(item => item.CommunityRating && item.CommunityRating >= 8 && item.BackdropImageTags && item.BackdropImageTags.length > 0); 
+    items.sort(() => 0.5 - Math.random()); 
+    let randomItems = items.slice(0, 10);
+
+    if (randomItems.length === 0) {
+        carouselSlide.innerHTML = '<p style="padding: 20px; color: var(--secondary-text);">暂无符合条件的高分推荐。</p>';
+        return;
+    }
+
+    let html = '';
+    randomItems.forEach(item => {
+      let imageUrl = 'placeholder-thumb.png'; 
+      if (item.Id && item.BackdropImageTags && item.BackdropImageTags.length > 0) { 
+          imageUrl = `${MOVIE_API_BASE_URL}/images/fanart/${item.Id}`; 
+      }
+      html += `
+        <div class="carousel-item" onclick="openMovieDetailPage('${item.Id || item.uniqueid_num}')" title="${item.Name}"> 
+          <img src="${imageUrl}" alt="${item.Name}" loading="lazy" onerror="this.onerror=null; this.src='placeholder-thumb.png';">
+          <div class="carousel-item-title">${item.Name}</div>
+        </div>
+      `;
+    });
+    carouselSlide.innerHTML = html;
+    setTimeout(setupCarouselLooping, 100); 
+
+  } catch (error) {
+    console.error('获取随机电影推荐失败:', error);
+    carouselSlide.innerHTML = '<p style="padding: 20px; color: var(--secondary-text);">加载推荐失败。</p>';
+  }
+}
+function setupCarouselLooping() { 
+    if (carouselInterval) { clearInterval(carouselInterval); carouselInterval = null; }
+    currentCarouselIndex = 0; isCarouselPaused = false;
+    const slide = document.getElementById('carouselSlide');
+    const container = document.getElementById('randomCarousel');
+    if (!slide || !container) return;
+    const items = slide.querySelectorAll('.carousel-item:not(.carousel-item-clone)');
+    if (items.length <= 1) return;
+    
+    if (items[0].offsetWidth === 0) {
+        console.warn("Carousel items have no width yet, retrying setup.");
+        setTimeout(setupCarouselLooping, 200); 
+        return;
+    }
+
+    const itemWidth = items[0].offsetWidth;
+    const itemStyle = window.getComputedStyle(items[0]);
+    const itemMarginRight = parseFloat(itemStyle.marginRight) || 0;
+    const itemGap = parseFloat(window.getComputedStyle(slide).gap) || 15;
+    const itemTotalWidth = itemWidth + Math.max(itemMarginRight, itemGap);
+
+    if (itemTotalWidth === 0) {
+        console.warn("Carousel item total width is zero, cannot setup looping.");
+        return;
+    }
+
+    const existingClones = slide.querySelectorAll('.carousel-item-clone');
+    existingClones.forEach(clone => slide.removeChild(clone));
+    
+    const containerWidth = container.offsetWidth;
+    const visibleItemsRoughly = Math.ceil(containerWidth / itemTotalWidth);
+    const itemsToCloneCount = Math.min(items.length, visibleItemsRoughly + 3); 
+    
+    for (let i = 0; i < itemsToCloneCount; i++) {
+        if (items[i]) {
+            const clone = items[i].cloneNode(true);
+            clone.classList.add('carousel-item-clone');
+            slide.appendChild(clone);
+        }
+    }
+    const originalItemCount = items.length;
+
+    function scrollNext() {
+        if (isCarouselPaused) return;
+        currentCarouselIndex++;
+        slide.style.transition = 'transform 0.6s ease-in-out';
+        slide.style.transform = `translateX(-${currentCarouselIndex * itemTotalWidth}px)`;
+        if (currentCarouselIndex >= originalItemCount) {
+            setTimeout(() => {
+                slide.style.transition = 'none';
+                currentCarouselIndex = 0;
+                slide.style.transform = `translateX(0)`;
+                setTimeout(() => { slide.style.transition = 'transform 0.6s ease-in-out'; }, 50);
+            }, 600);
+        }
+    }
+    carouselInterval = setInterval(scrollNext, CAROUSEL_SCROLL_INTERVAL);
+    container.addEventListener('mouseenter', () => { isCarouselPaused = true; });
+    container.addEventListener('mouseleave', () => { isCarouselPaused = false; });
+}
+
+
+async function fetchHomePageData() {
+  contentArea.innerHTML = '<div class="loading-indicator">加载电影内容中...</div>';
+  const startIndex = (currentPage - 1) * window.pageSize;
+
+  const fetchOptions = {
+    StartIndex: startIndex,
+    Limit: window.pageSize,
+    SortBy: currentSortBy,
+    SortOrder: currentSortOrder,
+    SearchTerm: currentSearchTerm, 
+    IncludeItemTypes: currentContentTypeFilter || null, 
+    Genres: selectedMovieTags.length > 0 && !selectedMovieTags.includes('全部类型') ? selectedMovieTags.join(',') : null,
+    ParentId: selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null,
+  };
+  if (selectedMovieLibraries.length > 1) {
+      delete fetchOptions.ParentId;
+      console.warn("Multiple libraries selected, fetching from all. Backend doesn't support multiple ParentIds directly in one query.");
+  }
+
+  try {
+    const responseData = await fetchLocalMediaItems(fetchOptions, true);
+
+    totalItems = responseData.TotalRecordCount || 0;
+    totalPages = responseData.TotalPages || Math.max(1, Math.ceil(totalItems / window.pageSize));
+
+    const items = responseData.Items || [];
+
+    if (items.length === 0) {
+        contentArea.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--secondary-text);">没有找到符合当前筛选条件的影片。</p>';
+    } else {
+        let title;
+        if (currentContentTypeFilter === 'Movie') {
+            title = '电影结果';
+        } else if (currentContentTypeFilter === 'Series') {
+            title = '剧集结果';
+        } else {
+            title = '所有结果'; 
+        }
+        contentArea.innerHTML = createMovieCarouselGrid(title, items);
+    }
+  } catch (error) {
+    console.error('加载电影首页数据失败:', error);
+    contentArea.innerHTML = '<p class="loading-indicator" style="color: var(--accent-color);">加载内容失败，请检查服务器连接或稍后重试。</p>';
+    totalItems = 0; totalPages = 1;
+  } finally {
+    updateMoviePagination();
+  }
+}
+
+async function fetchLocalMediaItems(options, returnFullResponse = false) {
+    const {
+        StartIndex, Limit, SortBy, SortOrder,
+        SearchTerm, 
+        uniqueidNumFuzzy, 
+        uniqueidNumPrefix, 
+        Genres, ParentId, IncludeItemTypes,
+        personIds, studioIds, seriesName
+    } = options;
+
+    const params = new URLSearchParams();
+    if (StartIndex !== undefined) params.append('StartIndex', StartIndex);
+    if (Limit !== undefined) params.append('Limit', Limit);
+    if (SortBy) params.append('SortBy', SortBy);
+    if (SortOrder) params.append('SortOrder', SortOrder);
+
+    if (uniqueidNumFuzzy) {
+        params.append('uniqueid_num_fuzzy', uniqueidNumFuzzy);
+    } else if (uniqueidNumPrefix) {
+        params.append('uniqueid_num_prefix', uniqueidNumPrefix);
+    } else if (SearchTerm) {
+        params.append('SearchTerm', SearchTerm);
+    }
+
+    if (Genres) params.append('Genres', Genres);
+    if (ParentId) params.append('ParentId', ParentId);
+    if (IncludeItemTypes) params.append('IncludeItemTypes', IncludeItemTypes);
+    if (personIds) params.append('personIds', personIds);
+    if (studioIds) params.append('studioIds', studioIds);
+    if (seriesName) params.append('seriesName', seriesName);
+
+    const url = `${MOVIE_API_BASE_URL}/items?${params.toString()}`;
+    console.log(`fetchLocalMediaItems: Fetching from URL: ${url}`);
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`fetchLocalMediaItems: HTTP error! status: ${response.status}, URL: ${url}, Response: ${errorText}`);
+            throw new Error(`HTTP error ${response.status}: ${errorText}`);
+        }
+        const data = await response.json();
+
+        console.log(`fetchLocalMediaItems: Response from URL (${url}):`, JSON.parse(JSON.stringify(data)));
+
+        return returnFullResponse ? data : (data.Items || []);
+    } catch (error) {
+        console.error(`fetchLocalMediaItems: Fetch failed for URL (${url}):`, error);
+        return returnFullResponse ? { Items: [], TotalRecordCount: 0, CurrentPage:1, PageSize: Limit || 20, TotalPages:0 } : [];
+    }
+}
+
+function createMovieCarouselGrid(sectionTitle, items) {
+  if (!items || items.length === 0) { return ''; }
+  const placeholderGridImg = '/static/placeholder_poster.png';
+  let gridHTML = `
+    <div class="section">
+      <h2 class="section-title">${sectionTitle} (${items.length})</h2>
+      <div class="carousel-grid">
+  `;
+  items.forEach(item => {
+    const itemIdForLink = item.Id || item.uniqueid_num; 
+    let imageUrl = placeholderGridImg;
+    if (itemIdForLink) {
+        imageUrl = `${MOVIE_API_BASE_URL}/images/poster/${itemIdForLink}`;
+    }
+    const itemLikedClass = item.is_liked ? 'liked-item' : ''; // NEW: class for the .carousel-item
+
+    gridHTML += `
+      <div class="carousel-item ${itemLikedClass}" 
+           onmouseover="showMovieHoverCard(event, '${itemIdForLink}')" 
+           onmouseout="hideMovieHoverCard()"
+           onclick="openMovieDetailPage('${itemIdForLink}')"> 
+        <img src="${imageUrl}" alt="${item.Name || item.title}" loading="lazy" onerror="this.onerror=null; this.src='${placeholderGridImg}';">
+        <div class="carousel-item-title">${item.Name || item.title}</div>
+      </div>
+    `;
+  });
+  gridHTML += `</div></div>`;
+  return gridHTML;
+}
+
+function openMovieDetailPage(itemId) {
+    window.open(`video_detail.html?itemId=${itemId}`, '_blank');
+}
+
+async function showMovieHoverCard(event, itemId) {
+    const hoverCard = videoDetailPageHoverCardDiv; 
+    hoverCard.style.display = 'block';
+    hoverCard.innerHTML = '<div class="loading-indicator" style="padding:20px; font-size:0.9em;">加载中...</div>';
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    const cardWidth = hoverCard.offsetWidth || 400; 
+    const cardHeight = hoverCard.offsetHeight || 250; 
+    
+    let top = window.scrollY + rect.bottom + 10;
+    let left = window.scrollX + rect.left + (rect.width / 2) - (cardWidth / 2);
+    
+    const margin = 10;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    if (left < margin + window.scrollX) left = margin + window.scrollX;
+    if (left + cardWidth > window.scrollX + viewportWidth - margin) {
+        left = window.scrollX + viewportWidth - cardWidth - margin;
+    }
+    if (top + cardHeight > window.scrollY + viewportHeight - margin) {
+        top = window.scrollY + rect.top - cardHeight - 10; 
+        if (top < window.scrollY + margin) top = window.scrollY + margin; 
+    }
+    
+    hoverCard.style.left = left + 'px';
+    hoverCard.style.top = top + 'px';
+
+    try {
+        const url = `${MOVIE_API_BASE_URL}/items/${itemId}`; 
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const itemDetails = await response.json(); 
+        renderMovieHoverDetail(itemDetails); 
+        
+        const newCardHeight = hoverCard.offsetHeight;
+        if (top + newCardHeight > window.scrollY + viewportHeight - margin && (top > window.scrollY + rect.top - newCardHeight -10) ) { 
+             top = window.scrollY + rect.top - newCardHeight - 10;
+             if (top < window.scrollY + margin) top = window.scrollY + margin;
+             hoverCard.style.top = top + 'px';
+        }
+
+    } catch (error) {
+        console.error('加载悬停电影详情失败:', error);
+        hoverCard.innerHTML = `<div class="video-detail-container" style="padding:15px;"><p style="color: var(--accent-color); font-size:0.9em;">加载详情失败。</p></div>`;
+    }
+}
+
+function hideMovieHoverCard() {
+    videoDetailPageHoverCardDiv.style.display = 'none';
+}
+
+function renderMovieHoverDetail(item) { 
+    if (!item) { 
+        videoDetailPageHoverCardDiv.innerHTML = `<div class="video-detail-container"><p style="color: var(--accent-color);">无详情信息。</p></div>`;
+        return;
+    }
+    let posterUrl = 'placeholder-detail.png';
+    if (item.Id) { 
+        posterUrl = `${MOVIE_API_BASE_URL}/images/poster/${item.Id}`;
+    }
+
+    const year = item.ProductionYear || (item.PremiereDate ? new Date(item.PremiereDate).getFullYear() : 'N/A');
+    const rating = item.CommunityRating ? `⭐ ${item.CommunityRating.toFixed(1)}` : 'N/A';
+    const runtimeMinutes = item.RunTimeTicks ? Math.round(item.RunTimeTicks / (60 * 1000 * 10000)) : null;
+    const runtimeStr = runtimeMinutes ? `${runtimeMinutes} 分钟` : 'N/A';
+    const genres = Array.isArray(item.genres) ? item.genres.join(', ') : (Array.isArray(item.Genres) ? item.Genres.join(', ') : 'N/A'); 
+    const overview = item.Overview || item.plot || '暂无简介';
+    
+    let actorsDisplay = '未知';
+    if (Array.isArray(item.People)) {
+        actorsDisplay = item.People.filter(p => p.Type === 'Actor').map(p => p.Name).slice(0, 3).join(', ') || '未知';
+        if (item.People.filter(p => p.Type === 'Actor').length > 3) actorsDisplay += '...';
+    } else if (Array.isArray(item.actors)) { 
+        actorsDisplay = item.actors.map(a => a.name).slice(0,3).join(', ') || '未知';
+        if (item.actors.length > 3) actorsDisplay += '...';
+    }
+
+    const detailHTML = `
+        <div class="video-detail-container">
+            <img src="${posterUrl}" alt="${item.Name}" class="video-detail-backdrop" onerror="this.onerror=null; this.src='placeholder-detail.png';">
+            <h2 class="video-detail-title">${item.Name} ${year !== 'N/A' ? `(${year})` : ''}</h2>
+            <div class="video-detail-info">
+                <span>评分: ${rating}</span>
+                <span>时长: ${runtimeStr}</span>
+            </div>
+            <div class="video-detail-info">
+                <span>类型: ${genres}</span>
+            </div>
+            <div class="video-detail-info">
+                <span>演员: ${actorsDisplay}</span>
+            </div>
+            <p class="video-detail-overview">${overview}</p>
+        </div>
+    `;
+    videoDetailPageHoverCardDiv.innerHTML = detailHTML;
+    const titleElement = videoDetailPageHoverCardDiv.querySelector('.video-detail-title');
+    if (titleElement && titleElement.textContent.length > 30) { 
+        titleElement.classList.add('long-title');
+    }
+}
+
+function updateMoviePagination() {
+    totalPages = Math.max(1, Math.ceil(totalItems / window.pageSize));
+    currentPage = Math.max(1, Math.min(currentPage, totalPages));
+    currentPageInput.value = currentPage;
+    currentPageInput.max = totalPages;
+    pageInfoSpan.textContent = `第 ${currentPage} / ${totalPages} 页 (共 ${totalItems} 项)`;
+    prevPageBtn.disabled = currentPage <= 1;
+    nextPageBtn.disabled = currentPage >= totalPages;
+    paginationDiv.style.display = totalPages <= 1 ? 'none' : 'flex';
+}
+function prevPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        if (isFilteredWorksViewActive) renderFilteredWorksCurrentPage();
+        else if (currentView === 'homepage') fetchHomePageData();
+        else if (currentView === 'uniqueIdSearch') fetchFuzzyUniqueIdMovies();
+        window.scrollTo(0, 0);
+    }
+}
+function nextPage() {
+    if (currentPage < totalPages) {
+        currentPage++;
+        if (isFilteredWorksViewActive) renderFilteredWorksCurrentPage();
+        else if (currentView === 'homepage') fetchHomePageData();
+        else if (currentView === 'uniqueIdSearch') fetchFuzzyUniqueIdMovies();
+        window.scrollTo(0, 0);
+    }
+}
+
+async function fetchLocalMovieGenres() {
+  try {
+    const parentIdParam = selectedMovieLibraries.length === 1 ? `?ParentId=${encodeURIComponent(selectedMovieLibraries[0])}` : '';
+    const response = await fetch(`${MOVIE_API_BASE_URL}/genres${parentIdParam}`);
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    movieGenres = await response.json(); 
+  } catch (error) {
+    console.error('获取电影类型失败:', error);
+    movieGenres = [];
+  }
+  renderTagPanel(); 
+}
+
+async function fetchLocalMovieLibraries() {
+  try {
+    const response = await fetch(`${MOVIE_API_BASE_URL}/libraries`);
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    movieLibraries = await response.json(); 
+  } catch (error) {
+    console.error('获取电影媒体库失败:', error);
+    movieLibraries = [];
+  }
+  renderLibraryFilters(); 
+}
+
+function renderLibraryFilters() { 
+  libraryFiltersDiv.innerHTML = '';
+  const allFilterDiv = createLibraryFilterOption('全部媒体库', '', selectedMovieLibraries.length === 0);
+  libraryFiltersDiv.appendChild(allFilterDiv);
+  movieLibraries.forEach(lib => {
+    const filterDiv = createLibraryFilterOption(lib.Name, lib.Id, selectedMovieLibraries.includes(lib.Id));
+    libraryFiltersDiv.appendChild(filterDiv);
+  });
+}
+
+function createLibraryFilterOption(name, id, isChecked) { 
+    const filterDiv = document.createElement('div');
+    filterDiv.classList.add('library-filter');
+    if (isChecked) filterDiv.classList.add('active');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    const uniqueId = `movie-lib-${(id || 'all').replace(/[^a-zA-Z0-9]/g, '-')}`;
+    checkbox.id = uniqueId;
+    checkbox.value = id; 
+    checkbox.checked = isChecked;
+    checkbox.addEventListener('change', (e) => {
+      toggleMovieLibraryFilter(id, e.target.checked);
+    });
+    const label = document.createElement('label');
+    label.setAttribute('for', uniqueId);
+    label.textContent = name;
+    filterDiv.addEventListener('click', (e) => {
+        if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+        }
+    });
+    filterDiv.appendChild(checkbox);
+    filterDiv.appendChild(label);
+    return filterDiv;
+}
+
+function toggleMovieLibraryFilter(libId, isChecked) {
+    if (libId === '') { 
+        selectedMovieLibraries = isChecked ? [] : selectedMovieLibraries; 
+    } else {
+        const currentLibs = new Set(selectedMovieLibraries);
+        if (isChecked) currentLibs.add(libId);
+        else currentLibs.delete(libId);
+        selectedMovieLibraries = Array.from(currentLibs);
+    }
+    currentPage = 1;
+    renderLibraryFilters(); 
+    fetchLocalMovieGenres(); 
+    fetchHomePageData(); 
+}
+
+function updateSortButtonsUI() { 
+    document.querySelectorAll('#sortContainer .sort-button').forEach(btn => { 
+        const sortField = btn.dataset.sort;
+        if (sortField === currentSortBy) {
+            btn.classList.add('active');
+            btn.dataset.order = currentSortOrder;
+            if (currentSortOrder === 'Descending') btn.classList.add('desc');
+            else btn.classList.remove('desc');
+        } else {
+            btn.classList.remove('active', 'desc');
+        }
+    });
+}
+function setSort(sortBy, clickedButton) { 
+    if (currentSortBy === sortBy) {
+        currentSortOrder = (currentSortOrder === 'Ascending') ? 'Descending' : 'Ascending';
+    } else {
+        currentSortBy = sortBy;
+        switch(sortBy) {
+            case 'DateCreated': case 'PremiereDate': case 'CommunityRating': case 'RunTimeTicks':
+                currentSortOrder = 'Descending'; break;
+            case 'SortName': default: currentSortOrder = 'Ascending'; break;
+        }
+    }
+    updateSortButtonsUI();
+    currentPage = 1;
+    handleGlobalSearch();
+}
+
+function handleGlobalSearch() {
+    console.log(`Global search initiated for term: "${currentSearchTerm}" in view: "${currentView}", Unique ID Mode: ${isUniqueIdSearchMode}`);
+
+    if (isUniqueIdSearchMode) {
+        fetchFuzzyUniqueIdMovies(); 
+        return; 
+    }
+
+    if (isFilteredWorksViewActive) {
+        fetchAndDisplayFilteredWorks();
+    } else {
+        switch (currentView) {
+            case 'homepage':
+                fetchHomePageData();
+                break;
+            case 'actor':
+            case 'director':
+            case 'studio':
+                renderGenericList(); 
+                break;
+            case 'series':
+                renderSeriesList(); 
+                break;
+            case 'number':
+                const activePrefixElement = document.querySelector('#numberPrefixListContainer .actor-list-item.active');
+                if (activePrefixElement) {
+                    const activePrefix = activePrefixElement.textContent.split(' ')[0];
+                    searchByNumberPrefix(activePrefix);
+                } else if (document.getElementById('manualNumberPrefixInput').value.trim() !== '') {
+                    const manualPrefix = document.getElementById('manualNumberPrefixInput').value.trim();
+                    searchByNumberPrefix(manualPrefix);
+                } else {
+                    console.log("Global search input does not directly filter the Number View prefixes or initiate a new number search without a prefix.");
+                }
+                break;
+            default:
+                console.warn("Unknown currentView for global search:", currentView);
+                fetchHomePageData(); 
+        }
+    }
+}
+
+async function searchByFuzzyNumber() {
+    showNumberView(false); 
+    numberResultsContainer.innerHTML = '<div class="loading-indicator">番号模糊搜索中...</div>';
+    try {
+        const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
+        const response = await fetchLocalMediaItems({
+            uniqueid_num_fuzzy: currentSearchTerm, 
+            ParentId: parentIdFilter,
+            Limit: 50000,
+            SortBy: 'SortName', SortOrder: 'Ascending'
+        }, true);
+        const items = response.Items || [];
+        if (items.length > 0) {
+            const gridHTML = createMovieCarouselGrid(`番号模糊搜索结果 (${items.length})`, items);
+            numberResultsContainer.innerHTML = gridHTML;
+        } else {
+            numberResultsContainer.innerHTML = `<p style="text-align:center;color:var(--secondary-text);padding-top:50px;">未找到包含 "${currentSearchTerm}" 的番号影片。</p>`;
+        }
+    } catch (err) {
+        console.error("Error searching by fuzzy number:", err);
+        numberResultsContainer.innerHTML = `<p style="text-align:center;color:var(--accent-color);padding-top:50px;">番号模糊搜索失败。</p>`;
+    }
+}
+
+async function showGenericView(configType, updateHist = true) {
+    isFilteredWorksViewActive = false; allFilteredWorksData = [];
+    const filteredTitle = document.getElementById('filteredWorksTitle');
+    if (filteredTitle) filteredTitle.style.display = 'none';
+    const config = viewConfigs[configType];
+    if (!config) { console.error("无效视图配置:", configType); return; }
+    currentGenericViewConfig = config;
+    currentView = config.type; 
+    allGenericData = []; genericSortBy = 'movieCount'; genericSortOrder = 'Descending'; isGenericListExpanded = false; selectedGenericIds.clear();
+    homepage.style.display = 'none';
+    numberViewPage.style.display = 'none'; seriesViewPage.style.display = 'none'; videoDetailPageHoverCardDiv.style.display = 'none';
+    genericViewPage.style.display = 'block'; paginationDiv.style.display = 'none';
+    genericViewTitle.textContent = config.title + '列表';
+    updateGenericSortButtons();
+    genericListContainer.innerHTML = `<div class="loading-indicator">加载${config.placeholderName}列表中...</div>`;
+    genericDetailsContainer.innerHTML = ''; genericExpandListBtn.style.display = 'none';
+    if (updateHist) updateURL(config.targetUrl, config.title + '列表');
+    await loadGenericData(); 
+}
+
+async function loadGenericData() { 
+    if (!currentGenericViewConfig) return;
+    genericListContainer.innerHTML = `<div class="loading-indicator">获取${currentGenericViewConfig.placeholderName}数据中...</div>`;
+    allGenericData = [];
+    const config = currentGenericViewConfig;
+    
+    const parentIdParam = selectedMovieLibraries.length === 1 ? `&ParentId=${encodeURIComponent(selectedMovieLibraries[0])}` : '';
+    let url = '';
+    if (config.type === 'actor' || config.type === 'director') {
+        url = `${MOVIE_API_BASE_URL}/persons?PersonType=${config.type.charAt(0).toUpperCase() + config.type.slice(1)}${parentIdParam}`;
+    } else if (config.type === 'studio') {
+        url = `${MOVIE_API_BASE_URL}/studios?${parentIdParam.substring(1)}`; 
+    } else { return; }
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const rawData = await response.json(); 
+        
+        allGenericData = rawData.map(item => ({
+            id: item.Id, 
+            name: item.Name,
+            movieCount: item.MovieCount,
+            primaryImageTag: item.ImageTag 
+        }));
+
+        sortGenericItems(genericSortBy, false); 
+        if (allGenericData.length === 0) { 
+            genericListContainer.innerHTML = `<p class="loading-indicator" style="color: var(--secondary-text);">未找到${config.placeholderName}。</p>`;
+            genericExpandListBtn.style.display = 'none';
+        } else { 
+            renderGenericList(); 
+        }
+
+    } catch (error) {
+        console.error(`加载${config.placeholderName}数据失败:`, error);
+        genericListContainer.innerHTML = `<p class="loading-indicator" style="color: var(--accent-color);">加载失败。</p>`;
+    }
+}
+async function fetchGenericDataAndMovies(itemId) { 
+    if (!currentGenericViewConfig) throw new Error("视图配置未设置");
+    const config = currentGenericViewConfig;
+    const itemData = allGenericData.find(d => d.id === itemId); 
+    if (!itemData) throw new Error(`找不到 ${itemId} 的基础数据`);
+
+				let itemImageUrl = null;
+				if (config.type === 'actor') { // 只针对演员类型处理
+								// 直接使用演员的名字 (itemData.name) 来构建图片URL
+								// 确保 itemData.name 是存在的
+								if (itemData.name) {
+												itemImageUrl = `${MOVIE_API_BASE_URL}/images/actor_thumb/${encodeURIComponent(itemData.name)}`;
+												// console.log(`Generic view: Using actor name '${itemData.name}' for image URL: ${itemImageUrl}`);
+								} else {
+												console.warn(`Actor (ID: ${itemData.id}) is missing a name. Cannot generate image URL.`);
+								}
+				}
+    
+    let itemMovies = [];
+    try {
+        const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
+        const moviesResponse = await fetchLocalMediaItems({
+            [config.apiQueryParam]: itemId, 
+            ParentId: parentIdFilter,
+            Limit: 50000, 
+            SortBy: 'PremiereDate', SortOrder: 'Descending'
+        }, true); 
+        itemMovies = moviesResponse.Items || [];
+    } catch (err) { console.error("获取作品失败", err); }
+    return { itemData, itemImageUrl, itemMovies };
+}
+
+function renderSingleGenericRow(itemData, itemImageUrl, itemMovies) {
+    if (!itemData || !currentGenericViewConfig) return;
+    const config = currentGenericViewConfig;
+    const detailItemDiv = document.createElement('div');
+    detailItemDiv.classList.add('actor-detail-item');
+    const itemInfoDiv = document.createElement('div');
+    itemInfoDiv.classList.add('actor-detail-image');
+    itemInfoDiv.style.cursor = 'pointer';
+    itemInfoDiv.title = `查看 ${itemData.name} (${config.placeholderName}) 的作品列表`;
+    itemInfoDiv.onclick = () => showFilteredWorksView(config.type, itemData.id, itemData.name);
+
+    if (itemImageUrl) { 
+        const img = document.createElement('img');
+        img.src = itemImageUrl; 
+        img.onerror = () => { 
+            img.remove(); 
+            itemInfoDiv.style.display = 'flex'; itemInfoDiv.style.alignItems = 'center'; itemInfoDiv.style.justifyContent = 'center'; itemInfoDiv.style.textAlign = 'center'; itemInfoDiv.style.backgroundColor = 'var(--card-bg)';
+            itemInfoDiv.innerHTML = `<span style="font-size: 0.9em; padding: 5px;">${itemData.name}<br>(无图)</span>`;
+        };
+        itemInfoDiv.appendChild(img);
+    } else { 
+        itemInfoDiv.style.display = 'flex'; itemInfoDiv.style.alignItems = 'center'; itemInfoDiv.style.justifyContent = 'center'; itemInfoDiv.style.textAlign = 'center'; itemInfoDiv.style.backgroundColor = 'var(--card-bg)';
+        itemInfoDiv.innerHTML = `<span style="font-size: 0.9em; padding: 5px;">${itemData.name}</span>`;
+    }
+    detailItemDiv.appendChild(itemInfoDiv);
+
+    const moviesContainerDiv = document.createElement('div');
+    moviesContainerDiv.style.minWidth = '0'; 
+    const moviesDiv = document.createElement('div');
+    moviesDiv.classList.add('actor-movies-scrollable');
+    if (itemMovies && itemMovies.length > 0) {
+        itemMovies.forEach(movie => {
+            const movieImg = document.createElement('img');
+            const posterUrl = movie.Id ? `${MOVIE_API_BASE_URL}/images/poster/${movie.Id}` : '${placeholderGridImg}';
+            movieImg.src = posterUrl; 
+            movieImg.onerror = () => { movieImg.src = placeholderMoviePosterImg; };
+            movieImg.alt = movie.Name; movieImg.title = movie.Name;
+            movieImg.classList.add('actor-movie-poster');
+            movieImg.onclick = () => openMovieDetailPage(movie.Id || movie.uniqueid_num);
+            moviesDiv.appendChild(movieImg);
+        });
+    } else { 
+        moviesDiv.innerHTML = `<p style="color:var(--secondary-text); padding-top: 60px; text-align:center; width:100%;">暂无${config.placeholderItemName}。</p>`;
+    }
+    moviesContainerDiv.appendChild(moviesDiv);
+    detailItemDiv.appendChild(moviesContainerDiv);
+    genericDetailsContainer.appendChild(detailItemDiv);
+}
+
+function renderGenericList() { 
+    if (!currentGenericViewConfig) return;
+    genericListContainer.innerHTML = '';
+    if (allGenericData.length === 0) { genericExpandListBtn.style.display = 'none'; return; }
+    const config = currentGenericViewConfig;
+    const maxInitialItems = 40; 
+    
+    const filteredGenericData = allGenericData.filter(item => 
+        currentSearchTerm === '' || item.name.toLowerCase().includes(currentSearchTerm.toLowerCase())
+    );
+
+    if (filteredGenericData.length === 0) {
+        genericListContainer.innerHTML = `<p class="loading-indicator" style="color: var(--secondary-text);">没有找到符合条件的${config.placeholderName}。</p>`;
+        genericExpandListBtn.style.display = 'none';
+        genericDetailsContainer.innerHTML = ''; 
+        return;
+    }
+
+    const itemsToShow = isGenericListExpanded ? filteredGenericData : filteredGenericData.slice(0, maxInitialItems);
+
+    itemsToShow.forEach(item => {
+        const itemSpan = document.createElement('span');
+        itemSpan.classList.add('actor-list-item');
+        itemSpan.dataset[config.type + 'Id'] = item.id; 
+        itemSpan.textContent = `${item.name} (${item.movieCount})`;
+        if (selectedGenericIds.has(item.id)) itemSpan.classList.add('active');
+        itemSpan.onclick = () => {
+            const itemId = item.id; 
+            if (selectedGenericIds.has(itemId)) { selectedGenericIds.delete(itemId); itemSpan.classList.remove('active'); }
+            else { selectedGenericIds.add(itemId); itemSpan.classList.add('active'); }
+            updateGenericDetails(); 
+        };
+        genericListContainer.appendChild(itemSpan);
+    });
+
+    if (filteredGenericData.length > maxInitialItems) {
+        genericExpandListBtn.style.display = 'block';
+        genericExpandListBtn.textContent = isGenericListExpanded ? '↑收起↑' : '↓展开↓';
+        genericListContainer.classList.toggle('expanded', isGenericListExpanded);
+    } else {
+        genericExpandListBtn.style.display = 'none';
+        genericListContainer.classList.remove('expanded');
+    }
+}
+function toggleGenericListExpansion() { isGenericListExpanded = !isGenericListExpanded; renderGenericList(); }
+function sortGenericItems(sortBy, shouldRender = true) {
+    if (!currentGenericViewConfig) return;
+
+    if (genericSortBy === sortBy) {
+        if (shouldRender) {
+            genericSortOrder = (genericSortOrder === 'Ascending') ? 'Descending' : 'Ascending';
+        }
+    } else {
+        genericSortBy = sortBy;
+        genericSortOrder = (sortBy === 'name') ? 'Ascending' : 'Descending';
+    }
+
+    allGenericData.sort((a, b) => {
+        let valA, valB;
+        if (sortBy === 'name') {
+            valA = a.name.toLowerCase();
+            valB = b.name.toLowerCase();
+            return genericSortOrder === 'Ascending' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        } else { 
+            valA = a.movieCount;
+            valB = b.movieCount;
+            const diff = genericSortOrder === 'Ascending' ? valA - valB : valB - valA;
+            return diff !== 0 ? diff : a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+        }
+    });
+
+    updateGenericSortButtons();
+    if (shouldRender) renderGenericList();
+    if (selectedGenericIds.size > 0 && shouldRender) updateGenericDetails();
+}
+function updateGenericSortButtons() { 
+    document.querySelectorAll('#genericPersonStudioViewPage .actor-sort-controls .sort-button').forEach(btn => btn.classList.remove('active', 'desc'));
+    const activeBtn = genericSortBy === 'name' ? genericSortByNameBtn : genericSortByCountBtn;
+    if (activeBtn) { activeBtn.classList.add('active'); if (genericSortOrder === 'Descending') activeBtn.classList.add('desc'); }
+}
+async function updateGenericDetails() { 
+    if (!currentGenericViewConfig) return;
+    const config = currentGenericViewConfig;
+    genericDetailsContainer.innerHTML = `<div class="loading-indicator">加载${config.placeholderItemName}中...</div>`;
+    const selectedCount = selectedGenericIds.size;
+    if (selectedCount === 0) { genericDetailsContainer.innerHTML = `<p style="text-align:center;padding-top:50px;color:var(--secondary-text);">请选择${config.placeholderName}查看${config.placeholderItemName}。</p>`; }
+    else if (selectedCount === 1) { const itemId = selectedGenericIds.values().next().value; await showSingleGenericDetails(itemId); }
+    else {
+        genericDetailsContainer.innerHTML = '';
+        const promises = Array.from(selectedGenericIds).map(id => fetchGenericDataAndMovies(id));
+        const results = await Promise.allSettled(promises);
+        results.forEach(res => {
+            if (res.status === 'fulfilled' && res.value) { renderSingleGenericRow(res.value.itemData, res.value.itemImageUrl, res.value.itemMovies); }
+            else { console.error("Error fetching details for one item:", res.reason); }
+        });
+    }
+}
+async function showSingleGenericDetails(itemId) { 
+    if (!currentGenericViewConfig) return;
+    const config = currentGenericViewConfig;
+    genericDetailsContainer.innerHTML = `<div class="loading-indicator">加载${config.placeholderName}详情...</div>`;
+    try {
+        const { itemData, itemImageUrl, itemMovies } = await fetchGenericDataAndMovies(itemId);
+        genericDetailsContainer.innerHTML = ''; renderSingleGenericRow(itemData, itemImageUrl, itemMovies);
+    } catch (err) { 
+        console.error("Error in showSingleGenericDetails:", err);
+        genericDetailsContainer.innerHTML = `<p style="text-align:center;color:var(--accent-color);">加载详情失败。</p>`;
+    }
+}
+
+
+async function showNumberView(updateHist = true) {
+    isFilteredWorksViewActive = false; allFilteredWorksData = [];
+    const filteredTitle = document.getElementById('filteredWorksTitle');
+    if (filteredTitle) filteredTitle.style.display = 'none';
+
+    isUniqueIdSearchMode = false;
+    searchByIdBtn.classList.remove('active');
+    searchInput.classList.remove('unique-id-mode');
+    searchInput.placeholder = '搜索影片、演员、系列...';
+
+
+    currentView = 'number';
+    homepage.style.display = 'none'; genericViewPage.style.display = 'none'; seriesViewPage.style.display = 'none'; videoDetailPageHoverCardDiv.style.display = 'none';
+    numberViewPage.style.display = 'block'; paginationDiv.style.display = 'none';
+    numberResultsContainer.innerHTML = '<p style="text-align:center;color:var(--secondary-text);padding-top:50px;">点击上方番号前缀或手动输入搜索。</p>';
+    if (updateHist) updateURL('/numbers_view_page', '番号列表');
+    await displayNumberPrefixes();
+    window.scrollTo(0, 0);
+}
+
+async function displayNumberPrefixes() { 
+    numberPrefixListContainer.innerHTML = '<div class="loading-indicator">加载番号统计中...</div>';
+    const prefixPromises = numberPrefixes.map(async prefix => {
+        try {
+            const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
+            const response = await fetchLocalMediaItems({ 
+                uniqueid_num_prefix: prefix, 
+                ParentId: parentIdFilter,
+                Limit: 0 
+            }, true); 
+            return { prefix: prefix, count: response.TotalRecordCount || 0 };
+        } catch (error) {
+            console.error(`获取番号 ${prefix} 数量失败:`, error);
+            return { prefix: prefix, count: 0, error: true };
+        }
+    });
+    try {
+        const prefixCounts = await Promise.all(prefixPromises);
+        numberPrefixListContainer.innerHTML = '';
+        prefixCounts.sort((a, b) => a.prefix.localeCompare(b.prefix));
+        if (prefixCounts.length === 0) { 
+            numberPrefixListContainer.innerHTML = '<p class="loading-indicator" style="color:var(--secondary-text);">未配置番号前缀。</p>';
+            return;
+        }
+        prefixCounts.forEach(item => {
+            if (item.count > 0 || item.error) {
+                const span = document.createElement('span');
+                span.classList.add('actor-list-item');
+                span.textContent = `${item.prefix} (${item.error ? '错误' : item.count})`;
+                if (item.error) { span.style.color = 'var(--accent-color)'; span.style.cursor = 'default'; }
+                else {
+                    span.title = `搜索番号以 "${item.prefix}" 开头的影片`;
+                    span.onclick = () => {
+                        document.querySelectorAll('#numberPrefixListContainer .actor-list-item.active').forEach(el => el.classList.remove('active'));
+                        span.classList.add('active');
+                        document.getElementById('manualNumberPrefixInput').value = ''; 
+                        searchByNumberPrefix(item.prefix);
+                    };
+                }
+                numberPrefixListContainer.appendChild(span);
+            }
+        });
+    } catch (err) { 
+        console.error("Error processing prefix counts:", err);
+        numberPrefixListContainer.innerHTML = '<p class="loading-indicator" style="color:var(--accent-color);">加载番号统计出错。</p>';
+    }
+}
+
+async function searchByNumberPrefix(prefix) {
+    numberResultsContainer.innerHTML = '<div class="loading-indicator">搜索影片中...</div>';
+    try {
+        const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
+        const options = {
+            uniqueidNumPrefix: prefix, 
+            ParentId: parentIdFilter,
+            Limit: 50000,
+            SortBy: 'SortName', SortOrder: 'Ascending'
+        };
+        if (!isUniqueIdSearchMode && currentSearchTerm) {
+            options.SearchTerm = currentSearchTerm;
+        }
+        const response = await fetchLocalMediaItems(options, true);
+        const items = response.Items || [];
+        if (items.length > 0) {
+            const searchTitle = currentSearchTerm && !isUniqueIdSearchMode ? ` (包含 "${currentSearchTerm}")` : '';
+            const gridHTML = createMovieCarouselGrid(`番号 "${prefix}" 搜索结果 (${items.length})${searchTitle}`, items);
+            numberResultsContainer.innerHTML = gridHTML;
+        } else {
+            numberResultsContainer.innerHTML = `<p style="text-align:center;color:var(--secondary-text);padding-top:50px;">未找到番号以 "${prefix}" 开头的影片${currentSearchTerm && !isUniqueIdSearchMode ? ` (包含 "${currentSearchTerm}")` : ''}。</p>`;
+        }
+    } catch (err) {
+        console.error("Error searching by number prefix:", err);
+        numberResultsContainer.innerHTML = `<p style="text-align:center;color:var(--accent-color);padding-top:50px;">搜索失败。</p>`;
+    }
+}
+
+// --- 系列视图 (Series View) ---
+let allSeriesData = [];
+let currentSeriesSortBy = 'movieCount';
+let currentSeriesSortOrder = 'Descending';
+
+async function showSeriesView(updateHist = true) {  
+    isFilteredWorksViewActive = false; allFilteredWorksData = [];
+    const filteredTitle = document.getElementById('filteredWorksTitle');
+    if (filteredTitle) filteredTitle.style.display = 'none';
+    currentView = 'series';
+    homepage.style.display = 'none'; genericViewPage.style.display = 'none'; numberViewPage.style.display = 'none'; videoDetailPageHoverCardDiv.style.display = 'none';
+    seriesViewPage.style.display = 'block'; paginationDiv.style.display = 'none';
+    seriesListContainer.innerHTML = '<div class="loading-indicator">加载系列中...</div>';
+    seriesTotalCountSpan.textContent = '总共获取了 0 个系列';
+    updateSeriesSortButtons();
+    if (updateHist) updateURL('/series_view_page', '系列列表');
+    await loadAllSeriesData(); 
+    window.scrollTo(0, 0);
+}
+async function loadAllSeriesData() { 
+    allSeriesData = [];
+    seriesListContainer.innerHTML = '<div class="loading-indicator">获取系列数据中...</div>';
+    try {
+        const parentIdParam = selectedMovieLibraries.length === 1 ? `?ParentId=${encodeURIComponent(selectedMovieLibraries[0])}` : '';
+        const response = await fetch(`${MOVIE_API_BASE_URL}/series${parentIdParam}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const rawSeriesItems = await response.json(); 
+
+        allSeriesData = rawSeriesItems.map(s => ({
+            id: s.Id, 
+            name: s.Name,
+            movieCount: s.ChildCount,
+            genres: s.Genres || [],
+            movies: [], isExpanded: false,
+            primaryImageTagForSeriesPoster: s.PrimaryImageTag, 
+            backdropImageTagsForSeries: s.BackdropImageTags || [] 
+        }));
+        sortSeriesData();
+        renderSeriesList(); 
+    } catch (err) { 
+        console.error("Error loading series data:", err);
+        seriesListContainer.innerHTML = '<p class="loading-indicator" style="color:var(--accent-color);">加载系列失败。</p>';
+    }
+}
+async function loadMoviesForSeries(seriesId) {
+    const series = allSeriesData.find(s => s.id === seriesId);
+    if (!series) { console.error("loadMoviesForSeries: Series not found for ID:", seriesId); return; }
+    if (series.movies.length > 0 && series.movies.length >= series.movieCount && series.movieCount > 0) {
+        if (series.isExpanded) {
+            const safeSuffix = generateSafeIdSuffixForSeries(series); 
+            const moviesContainerId = `series-movies-${safeSuffix}`;
+            const moviesContainer = document.getElementById(moviesContainerId);
+            if (moviesContainer) renderSeriesMovies(series, moviesContainer);
+        }
+        return;
+    }
+    if (series.movieCount === 0) {
+        const safeSuffix = generateSafeIdSuffixForSeries(series); 
+        const moviesContainerId = `series-movies-${safeSuffix}`;
+        const moviesContainer = document.getElementById(moviesContainerId);
+        if (moviesContainer) moviesContainer.innerHTML = '<div class="no-movies-message">此系列暂无影片。</div>';
+        return;
+    }
+    try {
+        const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
+        const moviesResponse = await fetchLocalMediaItems({
+            seriesName: series.id,
+            ParentId: parentIdFilter,
+            Limit: Math.max(series.movieCount, 50) + 10,
+            SortBy: 'PremiereDate', SortOrder: 'Ascending',
+            SearchTerm: currentSearchTerm 
+        }, true);
+        series.movies = (moviesResponse.Items || []).sort((a, b) => {
+            const dateA = a.PremiereDate ? new Date(a.PremiereDate).getTime() : 0;
+            const dateB = b.PremiereDate ? new Date(b.PremiereDate).getTime() : 0;
+            if (dateA === 0 && dateB === 0) return (a.Name || "").localeCompare(b.Name || "");
+            if (dateA === 0) return 1; if (dateB === 0) return -1;
+            const dateDiff = dateA - dateB;
+            return dateDiff !== 0 ? dateDiff : (a.Name || "").localeCompare(b.Name || "");
+        });
+        if (series.isExpanded) {
+            const safeSuffix = generateSafeIdSuffixForSeries(series); 
+            const moviesContainerId = `series-movies-${safeSuffix}`;
+            const moviesContainer = document.getElementById(moviesContainerId);
+            if (moviesContainer) renderSeriesMovies(series, moviesContainer);
+        }
+    } catch (err) {
+        console.error(`Error loading movies for series "${series.name}":`, err);
+        const safeSuffix = generateSafeIdSuffixForSeries(series); 
+        const moviesContainerId = `series-movies-${safeSuffix}`;
+        const moviesContainer = document.getElementById(moviesContainerId);
+        if (moviesContainer) moviesContainer.innerHTML = '<p class="loading-indicator" style="color:var(--accent-color);">加载影片失败。</p>';
+    }
+}
+
+function renderSeriesMovies(series, containerElement) {
+    containerElement.innerHTML = '';
+    if (!series.movies || series.movies.length === 0) { 
+        containerElement.innerHTML = '<div class="no-movies-message">此系列暂无影片记录。</div>';
+        return;
+    }
+    series.movies.forEach(movie => {
+        const movieWrapper = document.createElement('div');
+        movieWrapper.classList.add('series-movie-item-wrapper');
+        const movieImg = document.createElement('img');
+        const posterUrl = movie.Id ? `${MOVIE_API_BASE_URL}/images/poster/${movie.Id}` : '${placeholderGridImg}';
+        movieImg.src = posterUrl; 
+        movieImg.onerror = () => { movieImg.src = placeholderMoviePosterImg; };
+        movieImg.alt = movie.Name;
+        movieImg.title = movie.Name;
+        movieImg.classList.add('actor-movie-poster'); 
+        movieImg.onclick = () => openMovieDetailPage(movie.Id || movie.uniqueid_num);
+        movieWrapper.appendChild(movieImg);
+        let firstActorName = '';
+        if (movie.People && Array.isArray(movie.People)) {
+            const firstActor = movie.People.find(p => p.Type === 'Actor');
+            if (firstActor) firstActorName = firstActor.Name;
+        } else if (movie.actors && Array.isArray(movie.actors) && movie.actors.length > 0) {
+             firstActorName = movie.actors[0].name || movie.actors[0];
+        }
+        if (firstActorName) {
+            const actorNameSpan = document.createElement('span');
+            actorNameSpan.classList.add('series-movie-actor-name');
+            actorNameSpan.textContent = firstActorName;
+            movieWrapper.appendChild(actorNameSpan);
+        }
+        containerElement.appendChild(movieWrapper);
+    });
+}
+
+function sortSeriesData() { 
+    allSeriesData.sort((a, b) => {
+        let valA, valB;
+        if (currentSeriesSortBy === 'name') { valA = a.name.toLowerCase(); valB = b.name.toLowerCase(); return currentSeriesSortOrder === 'Ascending' ? valA.localeCompare(valB) : valB.localeCompare(valA); }
+        else { valA = a.movieCount; valB = b.movieCount; const diff = currentSeriesSortOrder === 'Ascending' ? valA - valB : valB - valA; return diff !== 0 ? diff : a.name.toLowerCase().localeCompare(b.name.toLowerCase()); }
+    });
+}
+function setSeriesSort(sortBy) { 
+    if (currentSeriesSortBy === sortBy) currentSeriesSortOrder = (currentSeriesSortOrder === 'Ascending') ? 'Descending' : 'Ascending';
+    else { currentSeriesSortBy = sortBy; currentSeriesSortOrder = (sortBy === 'name') ? 'Ascending' : 'Descending'; }
+    updateSeriesSortButtons(); sortSeriesData(); renderSeriesList();
+}
+function updateSeriesSortButtons() { 
+    document.querySelectorAll('#seriesViewPage .series-summary-controls .sort-button').forEach(btn => {
+        btn.classList.remove('active', 'desc');
+        if (btn.id === `sortSeriesBy${currentSeriesSortBy.charAt(0).toUpperCase() + currentSeriesSortBy.slice(1)}Btn`) {
+            btn.classList.add('active'); if (currentSeriesSortOrder === 'Descending') btn.classList.add('desc');
+        }
+    });
+}
+
+function renderSeriesList() {
+    seriesListContainer.innerHTML = '';
+    const filteredSeriesData = allSeriesData.filter(series => 
+        currentSearchTerm === '' || series.name.toLowerCase().includes(currentSearchTerm.toLowerCase())
+    );
+    if (filteredSeriesData.length === 0) {
+        seriesListContainer.innerHTML = '<p style="text-align:center;color:var(--secondary-text);padding:20px;">没有找到符合条件的系列。</p>';
+        seriesTotalCountSpan.textContent = `总共获取了 0 个系列`; 
+        return;
+    }
+    seriesTotalCountSpan.textContent = `总共获取了 ${filteredSeriesData.length} 个系列`;
+    filteredSeriesData.forEach(series => { 
+        const safeSuffix = generateSafeIdSuffixForSeries(series); 
+        const seriesItemId = `series-item-${safeSuffix}`;
+        const moviesContainerId = `series-movies-${safeSuffix}`;
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('series-item');
+        itemDiv.id = seriesItemId; 
+        const headerDiv = document.createElement('div');
+        headerDiv.classList.add('series-item-header');
+        const nameSpan = document.createElement('span');
+        nameSpan.classList.add('series-item-name');
+        const nameMainSpan = document.createElement('span');
+        nameMainSpan.classList.add('series-item-name-main');
+        nameMainSpan.textContent = series.name || "未知系列";
+        nameSpan.appendChild(nameMainSpan);
+        const detailsLineSpan = document.createElement('div');
+        detailsLineSpan.classList.add('series-item-details-line');
+        const countSpan = document.createElement('span');
+        countSpan.classList.add('series-movie-count');
+        countSpan.textContent = `(${series.movieCount} 部)`;
+        detailsLineSpan.appendChild(countSpan);
+        if (series.genres && series.genres.length > 0) {
+            const tagsContainer = document.createElement('span');
+            tagsContainer.classList.add('series-item-tags-container');
+            series.genres.slice(0, 5).forEach(g => {
+                const tagSpan = document.createElement('span');
+                tagSpan.classList.add('series-genre-tag');
+                tagSpan.textContent = g;
+                tagsContainer.appendChild(tagSpan);
+            });
+            detailsLineSpan.appendChild(tagsContainer);
+        }
+        nameSpan.appendChild(detailsLineSpan);
+        const expandBtn = document.createElement('button');
+        expandBtn.classList.add('series-item-expand-btn');
+        expandBtn.innerHTML = series.isExpanded ? '收起 ▾' : '展开 ▸';
+        expandBtn.onclick = (e) => { e.stopPropagation(); toggleSeriesExpansion(series.id); };
+        headerDiv.appendChild(nameSpan);
+        headerDiv.appendChild(expandBtn);
+        headerDiv.onclick = () => toggleSeriesExpansion(series.id);
+        const moviesContainer = document.createElement('div');
+        moviesContainer.classList.add('series-movies-container');
+        moviesContainer.id = moviesContainerId; 
+        if (series.isExpanded) {
+            moviesContainer.classList.add('expanded');
+            headerDiv.classList.add('expanded-header');
+            if (series.movies.length > 0) renderSeriesMovies(series, moviesContainer);
+            else if (series.movieCount > 0) moviesContainer.innerHTML = '<div class="loading-indicator">加载影片...</div>';
+            else moviesContainer.innerHTML = '<div class="no-movies-message">此系列暂无影片。</div>';
+        }
+        itemDiv.appendChild(headerDiv);
+        itemDiv.appendChild(moviesContainer);
+        seriesListContainer.appendChild(itemDiv);
+    });
+}
+async function toggleSeriesExpansion(seriesId, forceExpand = null) {
+    const series = allSeriesData.find(s => s.id === seriesId);
+    if (!series) { console.error("toggleSeriesExpansion: Series not found for ID:", seriesId); return; }
+    const safeSuffix = generateSafeIdSuffixForSeries(series); 
+    const seriesItemId = `series-item-${safeSuffix}`;
+    const moviesContainerId = `series-movies-${safeSuffix}`;
+    const moviesContainer = document.getElementById(moviesContainerId);
+    const headerDiv = document.querySelector(`#${seriesItemId} .series-item-header`); 
+    const expandBtn = headerDiv ? headerDiv.querySelector('.series-item-expand-btn') : null;
+    const newState = (forceExpand !== null) ? forceExpand : !series.isExpanded;
+    if (newState === series.isExpanded && forceExpand === null) return;
+    series.isExpanded = newState;
+    if (expandBtn) expandBtn.innerHTML = series.isExpanded ? '收起 ▾' : '展开 ▸';
+    if (moviesContainer) moviesContainer.classList.toggle('expanded', series.isExpanded);
+    if (headerDiv) headerDiv.classList.toggle('expanded-header', series.isExpanded);
+    if (series.isExpanded) {
+        if (series.movies.length === 0 && series.movieCount > 0) {
+            if (moviesContainer) moviesContainer.innerHTML = '<div class="loading-indicator">加载影片...</div>';
+            await loadMoviesForSeries(seriesId);
+        } else if (series.movies.length > 0 && moviesContainer) {
+            renderSeriesMovies(series, moviesContainer);
+        } else if (series.movieCount === 0 && moviesContainer) {
+            moviesContainer.innerHTML = '<div class="no-movies-message">此系列暂无影片。</div>';
+        }
+    }
+}
+
+
+async function showFilteredWorksView(type, id, name) { 
+    console.log(`显示过滤作品 ${type}: ${name} (ID: ${id})`);
+    isFilteredWorksViewActive = true; filteredWorksConfig = { type, id, name }; currentView = 'filteredWorks';
+    genericViewPage.style.display = 'none'; numberViewPage.style.display = 'none'; seriesViewPage.style.display = 'none'; videoDetailPageHoverCardDiv.style.display = 'none';
+    homepage.style.display = 'block'; contentArea.innerHTML = ''; paginationDiv.style.display = 'flex';
+    let titleElem = document.getElementById('filteredWorksTitle');
+    if (!titleElem) { 
+        titleElem = document.createElement('h2'); titleElem.id = 'filteredWorksTitle'; titleElem.className = 'section-title'; titleElem.style.paddingLeft = '20px';
+        const sortContainerElement = document.getElementById('sortContainer');
+        if(sortContainerElement && sortContainerElement.parentNode) {
+            sortContainerElement.parentNode.insertBefore(titleElem, sortContainerElement);
+        } else {
+            homepage.insertBefore(titleElem, homepage.firstChild); 
+        }
+    }
+    const typeChinese = { actor: '演员', director: '导演', studio: '工作室' }[type] || type;
+    titleElem.textContent = `${typeChinese}：${name} 的作品`; titleElem.style.display = 'block';
+    currentPage = 1; 
+    await fetchAndDisplayFilteredWorks(); 
+    window.scrollTo(0, 0);
+}
+async function fetchAndDisplayFilteredWorks() { 
+    if (!isFilteredWorksViewActive || !filteredWorksConfig.id) return;
+    contentArea.innerHTML = '<div class="loading-indicator">加载作品中...</div>';
+    const { type, id, name } = filteredWorksConfig;
+    const apiParam = { actor: 'personIds', director: 'personIds', studio: 'studioIds' }[type];
+    if (!apiParam) {
+        contentArea.innerHTML = '<p style="color:var(--accent-color);text-align:center;">配置错误。</p>';
+        return;
+    }
+    try {
+        const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
+        const response = await fetchLocalMediaItems({
+            [apiParam]: id, 
+            ParentId: parentIdFilter,
+            Limit: 5000, 
+            SearchTerm: currentSearchTerm 
+        }, true); 
+        allFilteredWorksData = response.Items || [];
+        sortItems(allFilteredWorksData, currentSortBy, currentSortOrder); 
+        totalItems = allFilteredWorksData.length;
+        totalPages = Math.max(1, Math.ceil(totalItems / window.pageSize));
+        currentPage = 1; 
+        renderFilteredWorksCurrentPage();
+    } catch (err) { 
+        console.error("Error fetching filtered works:", err);
+        contentArea.innerHTML = `<p style="text-align:center;color:var(--accent-color);">加载作品失败。</p>`;
+    }
+}
+function renderFilteredWorksCurrentPage() { 
+    if (!isFilteredWorksViewActive || !allFilteredWorksData) return;
+    const startIndex = (currentPage - 1) * window.pageSize;
+    totalItems = allFilteredWorksData.length;
+    totalPages = Math.max(1, Math.ceil(totalItems / window.pageSize));
+    currentPage = Math.max(1, Math.min(currentPage, totalPages));
+    const itemsForPage = allFilteredWorksData.slice(startIndex, startIndex + window.pageSize);
+    const typeChinese = { actor: '演员', director: '导演', studio: '工作室' }[filteredWorksConfig.type] || filteredWorksConfig.type;
+    const name = filteredWorksConfig.name || '未知';
+    const titleElem = document.getElementById('filteredWorksTitle');
+    if (titleElem) titleElem.textContent = `${typeChinese}：${name} 的作品 (${totalItems} 部)`;
+    if (itemsForPage.length > 0) {
+        contentArea.innerHTML = createMovieCarouselGrid(`第 ${currentPage}/${totalPages} 页`, itemsForPage);
+    } else if (totalItems === 0) {
+        contentArea.innerHTML = `<p style="text-align:center;padding:40px;color:var(--secondary-text);">未找到该 ${typeChinese} 的相关作品。</p>`;
+    } else {
+        contentArea.innerHTML = `<p style="text-align:center;padding:40px;color:var(--secondary-text);">当前页无内容。</p>`;
+    }
+    updateMoviePagination();
+}
+
+function sortItems(items, sortBy, sortOrder) {
+    if (!Array.isArray(items) || items.length === 0) return;
+    console.log(`客户端排序 ${items.length} 项，按 ${sortBy} (${sortOrder})`);
+    items.sort((a, b) => {
+        let valA, valB;
+        switch (sortBy) {
+            case 'SortName':
+                valA = a.Name || a.title || ''; valB = b.Name || b.title || '';
+                valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase();
+                return sortOrder === 'Ascending' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            case 'CommunityRating':
+                valA = Number(a.CommunityRating || a.rating) || 0;
+                valB = Number(b.CommunityRating || b.rating) || 0;
+                break;
+            case 'RunTimeTicks': 
+                valA = Number(a.RunTimeTicks || a.runtime) || 0; 
+                valB = Number(b.RunTimeTicks || b.runtime) || 0;
+                break;
+            case 'PremiereDate':
+                valA = a.PremiereDate || a.premiered || ''; valB = b.PremiereDate || b.premiered || '';
+                valA = valA ? new Date(valA).getTime() : 0; valB = valB ? new Date(valB).getTime() : 0;
+                if (valA === 0 && valB === 0) return 0; if (valA === 0) return 1; if (valB === 0) return -1;
+                break;
+            case 'DateCreated': 
+                valA = a.DateCreated || a.last_scanned_date || ''; 
+                valB = b.DateCreated || b.last_scanned_date || '';
+                valA = valA ? new Date(valA).getTime() : 0; valB = valB ? new Date(valB).getTime() : 0;
+                if (valA === 0 && valB === 0) return 0; if (valA === 0) return 1; if (valB === 0) return -1;
+                break;
+            default: return 0;
+        }
+        const diff = valA - valB;
+        if (sortOrder === 'Ascending') return diff;
+        return -diff; 
+    });
+}
+function generateSafeIdSuffixForSeries(seriesObject) {
+    let baseId = seriesObject.id; 
+    if (!baseId || String(baseId).trim() === '') {
+        console.warn(`系列 "${seriesObject.name}" 的 ID 为空或无效: "${seriesObject.id}". 将使用基于名称的备用ID。`);
+        let seriesNamePart = String(seriesObject.name || 'unknown_series_name_placeholder');
+        baseId = `_autogen_${seriesNamePart}`;
+    }
+    let encodedId = encodeURIComponent(String(baseId));
+    let safeSuffix = encodedId
+        .replace(/%/g, '_prcnt_')
+        .replace(/\./g, '_dot_')
+        .replace(/[^a-zA-Z0-9-_]/g, '_'); 
+    if (safeSuffix.match(/^[^a-zA-Z_]/)) {
+        safeSuffix = 'id_' + safeSuffix;
+    }
+    if (safeSuffix === "" || safeSuffix === "id_") {
+        console.error(`为系列 "${seriesObject.name}" (原始ID: ${seriesObject.id}) 生成的safeIdSuffix为空或无效: "${safeSuffix}". 使用最终备用。`);
+        safeSuffix = 'universal_fallback_' + Math.random().toString(36).slice(2, 9);
+    }
+    return safeSuffix;
+}
+
+function toggleUniqueIdSearchMode() {
+    isUniqueIdSearchMode = !isUniqueIdSearchMode;
+    if (isUniqueIdSearchMode) {
+        searchByIdBtn.classList.add('active');
+        searchInput.classList.add('unique-id-mode');
+        searchInput.placeholder = '搜索番号';
+        currentView = 'uniqueIdSearch'; 
+        document.getElementById('randomCarousel').style.display = 'none';
+        libraryFiltersDiv.style.display = 'none';
+        tagBtn.style.display = 'none';
+        tagPanel.classList.remove('active'); 
+        homepage.style.display = 'block';
+        contentArea.style.display = 'block';
+        paginationDiv.style.display = 'flex';
+        genericViewPage.style.display = 'none';
+        numberViewPage.style.display = 'none';
+        seriesViewPage.style.display = 'none';
+        videoDetailPageHoverCardDiv.style.display = 'none';
+        const filteredTitle = document.getElementById('filteredWorksTitle');
+        if (filteredTitle) filteredTitle.style.display = 'none';
+    } else {
+        searchByIdBtn.classList.remove('active');
+        searchInput.classList.remove('unique-id-mode');
+        searchInput.placeholder = '搜索影片、演员、系列...';
+        resetAndShowHome(); 
+    }
+    currentPage = 1; 
+    currentSearchTerm = searchInput.value.trim(); 
+    handleGlobalSearch(); 
+}
+async function fetchFuzzyUniqueIdMovies() {
+    contentArea.innerHTML = '<div class="loading-indicator">番号模糊搜索中...</div>';
+    const startIndex = (currentPage - 1) * window.pageSize;
+    try {
+        const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
+        const response = await fetchLocalMediaItems({
+            StartIndex: startIndex, 
+            Limit: window.pageSize, 
+            SortBy: currentSortBy, 
+            SortOrder: currentSortOrder, 
+            uniqueidNumFuzzy: currentSearchTerm, 
+            ParentId: parentIdFilter,
+            IncludeItemTypes: currentContentTypeFilter || null 
+        }, true);
+        totalItems = response.TotalRecordCount || 0;
+        totalPages = response.TotalPages || Math.max(1, Math.ceil(totalItems / window.pageSize));
+        const items = response.Items || [];
+        if (items.length > 0) {
+            const searchTitle = currentSearchTerm ? ` (包含 "${currentSearchTerm}")` : '';
+            const gridHTML = createMovieCarouselGrid(`番号模糊搜索结果 (${items.length})${searchTitle}`, items);
+            contentArea.innerHTML = gridHTML;
+        } else {
+            contentArea.innerHTML = `<p style="text-align:center;color:var(--secondary-text);padding-top:50px;">未找到包含 "${currentSearchTerm}" 的番号影片。</p>`;
+        }
+    } catch (err) {
+        console.error("Error searching by fuzzy number:", err);
+        contentArea.innerHTML = `<p style="text-align:center;color:var(--accent-color);padding-top:50px;">番号模糊搜索失败。</p>`;
+    } finally {
+        updateMoviePagination(); 
+    }
+}
+</script>
+</body>
+</html>

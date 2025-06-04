@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频详情</title>
+  <style>
+    /* CSS变量定义 */
+    :root {
+        --bg-color: #1F1F1F;
+        --nav-bg: #2B2B2B;
+        --card-bg: #3D3D3D;
+        --accent-color: #5C6BC0;
+        --hover-color: #7986CB;
+        --text-color: #F0F0F0;
+        --secondary-text: #B0B0B0;
+        --font-family: 'Arial', sans-serif;
+        --transition-speed: 0.3s;
+        --border-radius: 5px;
+        --like-color: #E91E63; /* Pink/Red for like */
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+
+    .loading-indicator {
+      text-align: center;
+      padding: 100px;
+      font-size: 1.5em;
+      color: var(--secondary-text);
+    }
+
+    .error-message {
+      text-align: center;
+      padding: 100px;
+      font-size: 1.2em;
+      color: var(--accent-color);
+    }
+
+    .detail-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding-bottom: 50px;
+      opacity: 0; /* Initially hidden for fade-in */
+      transition: opacity 0.5s ease-in;
+    }
+
+    .detail-container.loaded {
+      opacity: 1;
+    }
+
+    .backdrop-container {
+      height: 60vh; 
+      max-height: 550px;
+      background-size: cover;
+      background-position: center top;
+      position: relative;
+      margin-bottom: -150px; 
+    }
+
+    .backdrop-container::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 155px; 
+        background: linear-gradient(to bottom, rgba(31, 31, 31, 0), var(--bg-color)); 
+        z-index: 1;
+    }
+
+
+    .content-area {
+      display: flex;
+      gap: 30px;
+      padding: 20px;
+      position: relative;
+      z-index: 2; 
+    }
+
+    .poster-container {
+      flex-shrink: 0;
+      width: 300px; 
+      padding-top: 140px;
+    }
+
+    .poster-container img {
+      width: 100%;
+      height: auto;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      background-color: var(--card-bg); 
+    }
+
+    .info-container {
+      flex-grow: 1;
+      padding-top: 100px; 
+    }
+
+    .video-title {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: var(--text-color);
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+    }
+
+    .tagline { 
+        display: none;
+    }
+
+    .info-section {
+      margin-bottom: 15px;
+    }
+
+    .info-section strong {
+      color: var(--secondary-text);
+      min-width: 80px; 
+      display: inline-block;
+    }
+
+    .info-section span, .info-section a {
+        color: var(--text-color);
+        text-decoration: none;
+    }
+     .info-section a:hover {
+        color: var(--accent-color);
+    }
+
+    .overview {
+      margin-top: 20px;
+      line-height: 1.7;
+      color: #d0d0d0;
+    }
+    
+    .action-buttons-container {
+        margin-top: 20px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .action-button, .play-button {
+      display: inline-flex; 
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      background-color: var(--accent-color);
+      color: var(--text-color);
+      font-size: 1em;
+      font-weight: bold;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: background-color var(--transition-speed);
+      text-decoration: none;
+    }
+    .action-button:hover, .play-button:hover {
+      background-color: var(--hover-color);
+    }
+    .action-button:disabled, .play-button:disabled {
+        background-color: var(--card-bg);
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    .action-button.liked {
+        background-color: var(--like-color);
+    }
+    .action-button.liked:hover {
+        background-color: #D32F2F; 
+    }
+    .action-button svg, .play-button svg { 
+        margin-right: 8px;
+        width: 1.2em;
+        height: 1.2em;
+        fill: currentColor;
+    }
+
+    #playFeedback, #webPlayFeedback { 
+        margin-left: 15px;
+        font-size: 0.9em;
+        color: var(--secondary-text);
+    }
+    .video-player-container {
+        text-align: center; 
+    }
+    .video-player-container video {
+        max-width: 800px; 
+        max-height: 70vh;
+        background-color: black;
+        border-radius: var(--border-radius);
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1001;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.6);
+    }
+    .modal-content {
+        background-color: var(--nav-bg);
+        margin: 10% auto;
+        padding: 25px;
+        border: 1px solid var(--card-bg);
+        width: 80%;
+        max-width: 500px;
+        border-radius: var(--border-radius);
+        color: var(--text-color);
+    }
+    .modal-content h3 { color: var(--accent-color); margin-top: 0;}
+    .modal-close {
+        color: var(--secondary-text);
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .modal-close:hover, .modal-close:focus {
+        color: var(--text-color);
+    }
+    #newCollectionNameInput {
+        width: calc(100% - 110px);
+        padding: 8px;
+        margin-right: 10px;
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border: 1px solid var(--secondary-text);
+        border-radius: var(--border-radius);
+    }
+    #addCollectionBtn { margin-top: 10px; }
+    .collection-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--card-bg);
+    }
+    .collection-list-item:last-child { border-bottom: none; }
+    .collection-list-item button {
+        padding: 5px 10px;
+        font-size: 0.9em;
+    }
+    .collections-list { max-height: 200px; overflow-y: auto; margin-bottom: 15px;}
+
+
+    .people-section, .similar-section, .comments-section, .series-movies-section { 
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid var(--card-bg);
+    }
+
+    .people-section h3, .similar-section h3, .comments-section h3, .series-movies-section h3 { 
+      font-size: 1.4em;
+      margin-bottom: 20px;
+      color: var(--secondary-text);
+    }
+
+	.actor-detail-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 20px;
+		margin-bottom: 30px;
+		padding-bottom: 20px;
+		border-bottom: 1px solid var(--card-bg);
+	}
+	.actor-detail-row:last-child {
+		border-bottom: none;
+		margin-bottom: 0;
+	}
+
+	.actor-image-container-detail {
+		flex-shrink: 0;
+		width: 150px;
+		text-align: center;
+        cursor: pointer;
+	}
+	.actor-image-container-detail img {
+		width: 100%; /* Changed from auto to 100% to prevent overflow */
+		height: 200px;
+		object-fit: cover;
+		border-radius: var(--border-radius);
+		margin-bottom: 8px;
+		background-color: var(--card-bg);
+		border: 1px solid var(--nav-bg);
+	}
+	.actor-image-container-detail .actor-name-detail {
+		font-size: 0.9em;
+		color: var(--text-color);
+		line-height: 1.3;
+		display: block;
+	}
+	.horizontal-scroll-wrapper {
+		flex-grow: 1;
+		min-width: 0;
+		overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: var(--secondary-text) var(--nav-bg);
+	}
+    .horizontal-scroll-wrapper::-webkit-scrollbar {
+        height: 8px;
+    }
+    .horizontal-scroll-wrapper::-webkit-scrollbar-track {
+        background: var(--nav-bg);
+        border-radius: 10px;
+    }
+    .horizontal-scroll-wrapper::-webkit-scrollbar-thumb {
+        background-color: var(--secondary-text);
+        border-radius: 10px;
+        border: 2px solid var(--nav-bg);
+    }
+    .horizontal-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+        background-color: var(--accent-color);
+    }
+
+	.scroll-content-container {
+		display: flex;
+		gap: 15px;
+	}
+	.scroll-content-container > * {
+		flex-shrink: 0;
+	}
+	.actor-movie-poster-detail {
+		width: auto;
+		height: 180px;
+		object-fit: cover;
+		border-radius: var(--border-radius);
+		cursor: pointer;
+		transition: transform 0.2s ease;
+		background-color: var(--card-bg);
+	}
+	.actor-movie-poster-detail:hover {
+		transform: scale(1.05);
+	}
+	.actor-movie-poster-detail:last-child {
+		margin-right: 0;
+	}
+
+	.similar-item, .series-movie-item { 
+	}
+	.similar-item img, .series-movie-item img {
+		width: auto;
+		height: 225px;
+		object-fit: cover;
+		border-radius: var(--border-radius);
+		cursor: pointer;
+		transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+		background-color: var(--card-bg);
+		display: block;
+	}
+	.similar-item img:hover, .series-movie-item img:hover {
+		transform: scale(1.05);
+		box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+	}
+    .comment-form textarea {
+        width: 100%;
+        padding: 10px;
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border: 1px solid var(--secondary-text);
+        border-radius: var(--border-radius);
+        min-height: 80px;
+        margin-bottom: 10px;
+    }
+    .comment-form input[type="text"] {
+        width: 40%;
+        padding: 8px;
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border: 1px solid var(--secondary-text);
+        border-radius: var(--border-radius);
+        margin-bottom: 10px;
+        margin-right: 10px;
+    }
+    .comment-list {
+        margin-top: 20px;
+    }
+    .comment-item {
+        background-color: var(--card-bg);
+        padding: 15px;
+        border-radius: var(--border-radius);
+        margin-bottom: 10px;
+    }
+    .comment-item p { margin: 0 0 5px 0; }
+    .comment-meta {
+        font-size: 0.85em;
+        color: var(--secondary-text);
+    }
+
+    /* === START MOBILE ADAPTATIONS === */
+    @media (max-width: 768px) {
+        body {
+            line-height: 1.5; 
+        }
+        .detail-container {
+            padding-bottom: 20px;
+        }
+
+        .backdrop-container {
+            height: 40vh;
+            max-height: 300px; 
+            margin-bottom: -80px;
+        }
+        .backdrop-container::after {
+            height: 85px;
+        }
+
+        .content-area {
+            flex-direction: column;
+            padding: 10px;
+            gap: 15px;
+        }
+
+        .poster-container {
+            width: 60%; 
+            max-width: 220px; 
+            margin: 0 auto; 
+            padding-top: 70px;
+        }
+
+        .info-container {
+            padding-top: 20px; 
+            text-align: center;
+        }
+
+        .video-title {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .info-section {
+            text-align: left; 
+            margin-bottom: 10px; 
+        }
+        .info-section strong {
+             min-width: 70px; 
+             font-size: 0.9em;
+        }
+        .info-section span, .info-section a {
+            font-size: 0.9em;
+        }
+        .overview {
+            font-size: 0.9em;
+            text-align: left; 
+            margin-top: 15px;
+        }
+
+
+        .action-buttons-container {
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .action-button, .play-button {
+            padding: 8px 12px; 
+            font-size: 0.9em;
+        }
+        .action-button svg, .play-button svg {
+            margin-right: 5px; 
+            width: 1em;
+            height: 1em;
+        }
+        #playFeedback, #webPlayFeedback {
+             margin-left: 0; /* Remove margin if buttons are centered */
+             margin-top: 5px; /* Add some top margin if needed */
+             width: 100%; /* Take full width for centered text */
+             text-align: center;
+        }
+        div[style="margin-top: 30px;"] > button + button { /* Reduce margin between play buttons */
+            margin-left: 10px !important; /* Override inline style if needed, or adjust JS if inline style is dynamic */
+        }
+         div[style="margin-top: 30px;"] { /* Center play buttons container */
+            text-align: center;
+         }
+
+
+        /* Actor details stacking */
+        .actor-detail-row {
+            flex-direction: column;
+            align-items: center; 
+            gap: 10px; 
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .actor-image-container-detail {
+            width: 100px; 
+            padding-top: 0;
+        }
+        .actor-image-container-detail img {
+            /* width: 100% is already set from the base style and is desired here too */
+            height: 140px;
+        }
+        .actor-image-container-detail .actor-name-detail {
+            font-size: 0.85em;
+        }
+        .horizontal-scroll-wrapper {
+            width: 100%; 
+        }
+        .actor-movie-poster-detail {
+            height: 150px; 
+        }
+
+        /* Similar and Series items */
+        .similar-item img, .series-movie-item img {
+            height: 180px; 
+        }
+        
+        .people-section, .similar-section, .comments-section, .series-movies-section {
+          margin-top: 25px;
+          padding: 0 15px; 
+          border-top-width: 2px; 
+        }
+         .people-section h3, .similar-section h3, .comments-section h3, .series-movies-section h3 {
+            font-size: 1.3em; 
+            margin-bottom: 15px;
+            text-align: center; 
+        }
+
+        /* Video Player */
+        .video-player-container video {
+            max-width: 100%; 
+            max-height: 50vh;
+        }
+        
+        /* Modal */
+        .modal-content {
+            width: 90%;
+            margin: 15% auto; 
+            padding: 20px;
+        }
+        #newCollectionNameInput {
+            width: calc(100% - 130px); 
+        }
+        .collection-list-item button {
+            padding: 4px 8px;
+            font-size: 0.85em;
+        }
+
+
+        /* Comments Form */
+        .comment-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .comment-form input[type="text"] {
+            width: 100%;
+            margin-right: 0;
+            margin-bottom: 0; 
+            font-size: 0.9em;
+        }
+        .comment-form textarea {
+            margin-bottom: 0; 
+            font-size: 0.9em;
+            min-height: 70px;
+        }
+        #submitCommentBtn {
+            align-self: flex-end; 
+        }
+        .comment-item {
+            padding: 10px;
+        }
+        .comment-item p { font-size: 0.9em; }
+        .comment-meta { font-size: 0.8em; }
+    }
+    /* === END MOBILE ADAPTATIONS === */
+  </style>
+</head>
+<body>
+
+  <div id="loading" class="loading-indicator">加载详情中...</div>
+  <div id="error" class="error-message" style="display: none;"></div>
+
+  <div id="detailContainer" class="detail-container">
+    <div id="backdrop" class="backdrop-container"></div>
+    <div class="content-area">
+      <div class="poster-container">
+        <img id="poster" src="" alt="海报">
+      </div>
+      <div class="info-container">
+        <h1 id="title" class="video-title"></h1>
+        <p id="tagline" class="tagline" style="display:none;"></p>
+
+        <div class="info-section">
+          <strong>评分:</strong> <span id="rating"></span>
+        </div>
+        <div class="info-section">
+          <strong>年份:</strong> <span id="year"></span>
+        </div>
+        <div class="info-section">
+          <strong>时长:</strong> <span id="runtime"></span>
+        </div>
+         <div class="info-section" id="seriesInfoSection" style="display:none;">
+          <strong>系列:</strong> <span id="seriesName"></span>
+        </div>
+        <div class="info-section">
+          <strong>类型:</strong> <span id="genres"></span>
+        </div>
+        <div class="info-section">
+          <strong>工作室:</strong> <span id="studios"></span>
+        </div>
+        <div class="info-section">
+          <strong>导演:</strong> <span id="directors"></span>
+        </div>
+
+        <p id="overview" class="overview"></p>
+
+        <div class="action-buttons-container">
+            <button id="likeBtn" class="action-button">
+                <svg viewBox="0 0 24 24"><path d="M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.42,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.58,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z"></path></svg>
+                喜欢
+            </button>
+            <button id="collectionsBtn" class="action-button">
+                <svg viewBox="0 0 24 24"><path d="M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M17,15.5H14.5V18H12.5V15.5H10V13.5H12.5V11H14.5V13.5H17V15.5Z"></path></svg>
+                收藏夹
+            </button>
+        </div>
+
+        <div class="video-player-container" style="display: none; margin-top: 20px;">
+            <video id="webVideoPlayer" controls preload="auto" width="100%"></video>
+            <div id="webPlayFeedback" style="margin-top: 10px;"></div>
+        </div>
+        <div style="margin-top: 30px;">
+          <button id="webPlayBtn" class="play-button" style="margin-right: 15px;" disabled>网页播放</button>
+          <button id="potPlayerBtn" class="play-button" disabled>使用 PotPlayer 播放</button>
+          <span id="playFeedback"></span>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="people-section" style="padding: 0 20px;">
+        <h3>演员</h3>
+        <div id="actorsList" class="actors-list">
+        </div>
+    </div>
+    <div id="seriesMoviesSection" class="series-movies-section" style="padding: 0 20px; display: none;">
+        <h3 id="seriesMoviesTitle">同系列影片</h3>
+        <div id="seriesMoviesGridContainer">
+        </div>
+    </div>
+    <div class="similar-section" style="padding: 0 20px;">
+        <h3>相关影片</h3>
+        <div id="similarGridContainer">
+        </div>
+    </div>
+
+    <div class="comments-section" style="padding: 0 20px;">
+        <h3>评论</h3>
+        <div class="comment-form">
+            <input type="text" id="commentUserName" placeholder="你的名字 (可选)">
+            <textarea id="commentText" placeholder="添加你的评论..."></textarea>
+            <button id="submitCommentBtn" class="action-button">提交评论</button>
+        </div>
+        <div id="commentsList" class="comment-list">
+        </div>
+    </div>
+
+  </div>
+
+  <div id="collectionsModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeCollectionsModal()">×</span>
+      <h3>管理收藏夹</h3>
+      <div id="movieCurrentCollections">
+        <p><strong>当前所属收藏夹:</strong> <span id="currentCollectionsList">无</span></p>
+      </div>
+      <hr style="border-color: var(--card-bg); margin: 15px 0;">
+      <h4>添加到收藏夹</h4>
+      <div class="collections-list" id="availableCollectionsList">
+      </div>
+      <div>
+        <input type="text" id="newCollectionNameInput" placeholder="新收藏夹名称">
+        <button id="addCollectionBtn" class="action-button" onclick="createNewMovieCollection()">创建并添加</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    const API_BASE_URL = '/api_movies';
+    const PLACEHOLDER_POSTER_DETAIL = '/static/placeholder_poster.png';
+    const PLACEHOLDER_AVATAR_DETAIL = '/static/placeholder_actor.png';
+
+    const loadingDiv = document.getElementById('loading');
+    const errorDiv = document.getElementById('error');
+    const detailContainer = document.getElementById('detailContainer');
+    const backdropDiv = document.getElementById('backdrop');
+    const posterImg = document.getElementById('poster');
+    const titleH1 = document.getElementById('title');
+    const ratingSpan = document.getElementById('rating');
+    const yearSpan = document.getElementById('year');
+    const runtimeSpan = document.getElementById('runtime');
+    const seriesInfoSectionDiv = document.getElementById('seriesInfoSection');
+    const seriesNameSpan = document.getElementById('seriesName');
+    const genresSpan = document.getElementById('genres');
+    const studiosSpan = document.getElementById('studios');
+    const directorsSpan = document.getElementById('directors');
+    const overviewP = document.getElementById('overview');
+    const actorsListDiv = document.getElementById('actorsList');
+    const similarGridContainerDiv = document.getElementById('similarGridContainer');
+
+    const potPlayerBtn = document.getElementById('potPlayerBtn');
+    const playFeedback = document.getElementById('playFeedback');
+    const webPlayBtn = document.getElementById('webPlayBtn');
+    const webVideoPlayer = document.getElementById('webVideoPlayer');
+    const webPlayFeedback = document.getElementById('webPlayFeedback');
+    const videoPlayerContainer = document.querySelector('.video-player-container');
+
+    const likeBtn = document.getElementById('likeBtn');
+    const collectionsBtn = document.getElementById('collectionsBtn');
+    const collectionsModal = document.getElementById('collectionsModal');
+    const currentCollectionsListSpan = document.getElementById('currentCollectionsList');
+    const availableCollectionsListDiv = document.getElementById('availableCollectionsList');
+    const newCollectionNameInput = document.getElementById('newCollectionNameInput');
+    
+    const commentUserNameInput = document.getElementById('commentUserName');
+    const commentTextInput = document.getElementById('commentText');
+    const submitCommentBtn = document.getElementById('submitCommentBtn');
+    const commentsListDiv = document.getElementById('commentsList');
+    
+    const seriesMoviesSectionDiv = document.getElementById('seriesMoviesSection');
+    const seriesMoviesGridContainerDiv = document.getElementById('seriesMoviesGridContainer');
+    const seriesMoviesTitleH3 = document.getElementById('seriesMoviesTitle'); // Added for dynamic series title
+				
+    let currentMovieData = null;
+    let currentMovieId = null; 
+
+    function getItemIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('itemId');
+    }
+
+    function getLocalImageUrl(type, identifier) {
+        if (!identifier) {
+            return type === 'poster' ? PLACEHOLDER_POSTER_DETAIL : PLACEHOLDER_AVATAR_DETAIL;
+        }
+        return `${API_BASE_URL}/images/${type}/${encodeURIComponent(identifier)}`;
+    }
+
+    function formatRuntime(runtimeMinutes) {
+        if (!runtimeMinutes && runtimeMinutes !== 0) return 'N/A';
+        const totalMinutes = Math.round(runtimeMinutes);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        let result = '';
+        if (hours > 0) {
+            result += `${hours} 小时 `;
+        }
+        if (minutes > 0 || hours === 0) {
+            result += `${minutes} 分钟`;
+        }
+        return result.trim() || '0 分钟';
+    }
+
+    function displayError(message) {
+        loadingDiv.style.display = 'none';
+        detailContainer.style.display = 'none';
+        errorDiv.textContent = `加载失败：${message}`;
+        errorDiv.style.display = 'block';
+    }
+    
+    function escapeHtml(unsafe) {
+        if (unsafe === null || typeof unsafe === 'undefined') return '';
+        return String(unsafe)
+             .replace(/&/g, "&")
+             .replace(/</g, "<")
+             .replace(/>/g, ">")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "'");
+    }
+
+    async function fetchDetailsAndRelated(itemId) {
+      if (!itemId) {
+        displayError("无效的影片 ID。");
+        return;
+      }
+      currentMovieId = itemId; 
+
+      try {
+        const itemResponse = await fetch(`${API_BASE_URL}/items/${itemId}`);
+        if (!itemResponse.ok) {
+          throw new Error(`获取影片详情失败 (HTTP ${itemResponse.status})`);
+        }
+        const itemData = await itemResponse.json();
+        currentMovieData = itemData; 
+        if (itemData.Id) {
+            currentMovieId = itemData.Id; 
+        }
+
+        const actors = itemData.People?.filter(p => p.Type === 'Actor') || [];
+
+        let moviesInSeries = [];
+        if (itemData.set_name) {
+            const seriesMoviesResponse = await fetchLocalItems({ 
+                seriesName: itemData.set_name, 
+                Limit: 24, 
+                SortBy: 'PremiereDate', 
+                SortOrder: 'Ascending' 
+            });
+            moviesInSeries = seriesMoviesResponse.filter(m => m.Id !== itemData.Id);
+        }
+
+        let precomputedSimilarMovies = [];
+        if (currentMovieId) { 
+            try {
+                const relatedResponse = await fetch(`${API_BASE_URL}/items/${currentMovieId}/precomputed_related`);
+                if (relatedResponse.ok) {
+                    precomputedSimilarMovies = await relatedResponse.json();
+                } else {
+                    console.warn("Failed to fetch precomputed related movies:", relatedResponse.status);
+                }
+            } catch (err) {
+                console.error("Error fetching precomputed related movies:", err);
+            }
+        }
+        
+        renderPage(itemData, actors, moviesInSeries, precomputedSimilarMovies);
+        fetchMovieComments(); 
+
+      } catch (error) {
+        console.error("加载数据出错:", error);
+        displayError(error.message);
+      }
+    }
+
+    async function fetchLocalItems(options) {
+        const params = new URLSearchParams();
+        if (options.personIds) params.append('personIds', options.personIds);
+        if (options.seriesName) params.append('seriesName', options.seriesName);
+        if (options.Limit) params.append('Limit', options.Limit);
+        if (options.SortBy) params.append('SortBy', options.SortBy);
+        if (options.SortOrder) params.append('SortOrder', options.SortOrder);
+
+        const url = `${API_BASE_URL}/items?${params.toString()}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.error(`Fetch items error: HTTP ${response.status} for ${url}`);
+                return [];
+            }
+            const data = await response.json();
+            return data.Items || [];
+        } catch (error) {
+            console.error(`Fetch items network error for ${url}:`, error);
+            return [];
+        }
+    }
+
+    function renderPage(item, actors, moviesInSeries, similarMovies) {
+      if (item.BackdropImageTags && item.BackdropImageTags.length > 0) {
+        backdropDiv.style.backgroundImage = `url('${getLocalImageUrl('fanart', item.Id)}')`;
+      } else {
+		backdropDiv.style.backgroundColor = 'var(--nav-bg)';
+      }
+
+      posterImg.src = getLocalImageUrl('poster', item.Id);
+      posterImg.alt = item.Name;
+      posterImg.onerror = () => { posterImg.src = PLACEHOLDER_POSTER_DETAIL; };
+
+      titleH1.textContent = item.Name;
+      ratingSpan.textContent = item.CommunityRating ? `⭐ ${item.CommunityRating.toFixed(1)}` : 'N/A';
+      yearSpan.textContent = item.ProductionYear || (item.PremiereDate ? new Date(item.PremiereDate).getFullYear() : 'N/A');
+      runtimeSpan.textContent = formatRuntime(item.runtime);
+
+      if (item.set_name) {
+          seriesNameSpan.innerHTML = `<a href="/#seriesName=${encodeURIComponent(item.set_name)}" title="查看系列 ${item.set_name} 的所有影片">${escapeHtml(item.set_name)}</a>`;
+          seriesInfoSectionDiv.style.display = 'block';
+      } else {
+          seriesInfoSectionDiv.style.display = 'none';
+      }
+
+		if (item.genres && item.genres.length > 0) {
+				genresSpan.innerHTML = item.genres.map(genreName =>
+								`<a href="/#genre=${encodeURIComponent(genreName)}" title="查看更多 '${escapeHtml(genreName)}' 类型影片">${escapeHtml(genreName)}</a>`
+				).join(', ');
+		} else {
+				genresSpan.textContent = 'N/A';
+		}
+
+		if (item.Studios && item.Studios.length > 0) {
+							studiosSpan.innerHTML = item.Studios.map(studio =>
+											`<a href="/#studio=${encodeURIComponent(studio.Name)}" title="查看工作室 ${escapeHtml(studio.Name)} 的所有作品">${escapeHtml(studio.Name)}</a>`
+							).join(', ');
+		} else {
+						studiosSpan.textContent = 'N/A';
+		}
+
+		const directorsArr = item.People?.filter(p => p.Type === 'Director') || [];
+			if (directorsArr.length > 0) {
+							directorsSpan.innerHTML = directorsArr.map(dir =>
+												`<a href="/#director=${encodeURIComponent(dir.Name)}" title="查看导演 ${escapeHtml(dir.Name)} 的所有作品">${escapeHtml(dir.Name)}</a>`
+							).join(', ');
+			} else {
+						directorsSpan.textContent = 'N/A';
+		}
+      overviewP.textContent = item.Overview || '暂无简介。';
+
+      updateLikeButton(item.is_liked);
+      likeBtn.onclick = () => toggleMovieLike();
+      collectionsBtn.onclick = () => openCollectionsModal();
+
+      webVideoPlayer.pause(); 
+      webVideoPlayer.removeAttribute('src'); 
+      videoPlayerContainer.style.display = 'none'; 
+
+      if (currentMovieData && currentMovieData.strm_files && currentMovieData.strm_files.length > 0) {
+          const firstStream = currentMovieData.strm_files[0];
+          if (firstStream && firstStream.url) {
+              webPlayBtn.disabled = false;
+              webPlayBtn.onclick = () => playWithWebPlayer();
+              webPlayFeedback.textContent = '';
+          } else {
+              webPlayBtn.disabled = true;
+              webPlayFeedback.textContent = '无可用网页播放链接。';
+          }
+          if (firstStream && firstStream.path) {
+              potPlayerBtn.disabled = false;
+              potPlayerBtn.onclick = () => playWithPotPlayer();
+              playFeedback.textContent = '';
+          } else {
+              potPlayerBtn.disabled = true;
+              playFeedback.textContent = '无可用 PotPlayer 播放链接。';
+          }
+      } else {
+          webPlayBtn.disabled = true;
+          potPlayerBtn.disabled = true;
+          webPlayFeedback.textContent = '无可用播放链接。';
+          playFeedback.textContent = '无可用播放链接。';
+      }
+
+      actorsListDiv.innerHTML = '';
+      if (actors.length > 0) {
+        actorsListDiv.innerHTML = '<div class="loading-indicator" style="font-size:1em; padding: 20px 0;">加载演员作品中...</div>';
+        const actorsFragment = document.createDocumentFragment();
+        (async () => {
+            for (const actor of actors.slice(0, 10)) {
+                const actorRowDiv = document.createElement('div');
+                actorRowDiv.className = 'actor-detail-row';
+                const actorImageContainer = document.createElement('div');
+                actorImageContainer.className = 'actor-image-container-detail';
+                actorImageContainer.title = `查看演员 ${escapeHtml(actor.Name)} 的所有作品 (跳转至主页)`;
+                actorImageContainer.onclick = () => {
+                    window.location.href = `/#actor=${encodeURIComponent(actor.Name)}`;
+                };
+                const actorImg = document.createElement('img');
+                actorImg.src = getLocalImageUrl('actor_thumb', actor.Name);
+                actorImg.alt = actor.Name;
+                actorImg.onerror = () => { actorImg.src = PLACEHOLDER_AVATAR_DETAIL; };
+                const actorNameSpan = document.createElement('span');
+                actorNameSpan.className = 'actor-name-detail';
+                actorNameSpan.textContent = actor.Name;
+                actorImageContainer.appendChild(actorImg);
+                actorImageContainer.appendChild(actorNameSpan);
+                actorRowDiv.appendChild(actorImageContainer);
+                const actorMoviesContainerId = `actor-movies-scroll-${actor.Name.replace(/[^a-zA-Z0-9]/g, '')}`;
+                const { wrapper: actorMoviesWrapper, contentDiv: actorMoviesContentDiv } =
+                    createScrollableSection(actorMoviesContainerId);
+                actorMoviesContentDiv.innerHTML = '<span style="color: var(--secondary-text); display: inline-block; padding-top:60px;">加载作品...</span>';
+                actorRowDiv.appendChild(actorMoviesWrapper);
+                actorsFragment.appendChild(actorRowDiv);
+                fetchLocalItems({ personIds: actor.Name, Limit: 15, SortBy: 'PremiereDate', SortOrder: 'Descending' })
+                    .then(movies => {
+                        actorMoviesContentDiv.innerHTML = '';
+                        if (movies && movies.length > 0) {
+                            movies.forEach(movie => {
+                                const moviePosterImg = document.createElement('img');
+                                moviePosterImg.className = 'actor-movie-poster-detail';
+                                moviePosterImg.src = getLocalImageUrl('poster', movie.Id);
+                                moviePosterImg.alt = movie.Name;
+                                const movieYear = movie.PremiereDate ? new Date(movie.PremiereDate).getFullYear() : '';
+                                moviePosterImg.title = escapeHtml(movie.Name) + (movieYear ? ` (${movieYear})` : '');
+                                moviePosterImg.onerror = () => { moviePosterImg.src = PLACEHOLDER_POSTER_DETAIL; };
+                                moviePosterImg.onclick = () => {
+                                    window.location.href = `video_detail.html?itemId=${movie.Id}`;
+                                };
+                                actorMoviesContentDiv.appendChild(moviePosterImg);
+                            });
+                        } else {
+                            actorMoviesContentDiv.innerHTML = `<span style="color: var(--secondary-text); display: inline-block; padding-top:60px; text-align:center; width:100%;">暂无 ${escapeHtml(actor.Name)} 的其他作品。</span>`;
+                        }
+                    });
+            }
+            actorsListDiv.innerHTML = '';
+            actorsListDiv.appendChild(actorsFragment);
+        })();
+      } else {
+          actorsListDiv.innerHTML = '<p style="color: var(--secondary-text); padding: 20px 0;">暂无演员信息。</p>';
+      }
+
+      // --- Render Movies in the Same Series ---
+        seriesMoviesSectionDiv.style.display = 'none'; 
+        if (seriesMoviesTitleH3) {
+            seriesMoviesTitleH3.textContent = '同系列影片'; 
+        }
+        seriesMoviesGridContainerDiv.innerHTML = ''; 
+
+        if (item.set_name) { 
+            seriesMoviesSectionDiv.style.display = 'block'; 
+            if (seriesMoviesTitleH3) {
+                seriesMoviesTitleH3.textContent = escapeHtml(item.set_name); 
+            }
+
+            if (moviesInSeries && moviesInSeries.length > 0) { 
+                const { wrapper: seriesMoviesWrapper, contentDiv: seriesMoviesGrid } =
+                    createScrollableSection('seriesMoviesGridGeneratedContent');
+                seriesMoviesGridContainerDiv.appendChild(seriesMoviesWrapper);
+
+                moviesInSeries.forEach(seriesItem => {
+                    const seriesDiv = document.createElement('div');
+                    seriesDiv.className = 'series-movie-item similar-item'; 
+
+                    const seriesImg = document.createElement('img');
+                    seriesImg.src = getLocalImageUrl('poster', seriesItem.Id);
+                    seriesImg.alt = seriesItem.Name;
+                    const seriesItemYear = seriesItem.PremiereDate ? new Date(seriesItem.PremiereDate).getFullYear() : '';
+                    seriesImg.title = escapeHtml(seriesItem.Name) + (seriesItemYear ? ` (${seriesItemYear})` : '');
+                    seriesImg.onerror = () => { seriesImg.src = PLACEHOLDER_POSTER_DETAIL; };
+                    seriesImg.onclick = () => {
+                        window.location.href = `video_detail.html?itemId=${seriesItem.Id}`;
+                    };
+                    seriesDiv.appendChild(seriesImg);
+                    seriesMoviesGrid.appendChild(seriesDiv);
+                });
+            } else { 
+                seriesMoviesGridContainerDiv.innerHTML = '<p style="color: var(--secondary-text); text-align:center; padding:20px;">此为该系列唯一影片或未刮削到同系列其他影片。</p>';
+            }
+        }
+
+
+      similarGridContainerDiv.innerHTML = '';
+      if (similarMovies && similarMovies.length > 0) {
+        const { wrapper: similarWrapper, contentDiv: newSimilarGrid } =
+						createScrollableSection('similarMoviesGridPrecomputed');
+		similarGridContainerDiv.appendChild(similarWrapper);
+
+		similarMovies.forEach(simItem => {
+			const simDiv = document.createElement('div');
+			simDiv.className = 'similar-item';
+
+			const simImg = document.createElement('img');
+			simImg.src = getLocalImageUrl('poster', simItem.Id); 
+			simImg.alt = simItem.Name;
+            const simItemYear = simItem.PremiereDate ? new Date(simItem.PremiereDate).getFullYear() : '';
+			simImg.title = escapeHtml(simItem.Name) + (simItemYear ? ` (${simItemYear})` : '');
+			simImg.onerror = () => { simImg.src = PLACEHOLDER_POSTER_DETAIL; };
+			simImg.onclick = () => {
+				window.location.href = `video_detail.html?itemId=${simItem.Id}`;
+			};
+			simDiv.appendChild(simImg);
+			newSimilarGrid.appendChild(simDiv);
+		});
+	  } else { 
+		    similarGridContainerDiv.innerHTML = '<p style="color: var(--secondary-text); text-align:center; padding:20px;">暂无相关影片推荐。</p>';
+	  }
+
+      submitCommentBtn.onclick = () => submitMovieComment();
+
+      loadingDiv.style.display = 'none';
+      detailContainer.classList.add('loaded');
+    }
+
+    function updateLikeButton(isLiked) {
+        if (isLiked) {
+            likeBtn.classList.add('liked');
+            likeBtn.title = "取消喜欢";
+        } else {
+            likeBtn.classList.remove('liked');
+            likeBtn.title = "喜欢";
+        }
+        if (currentMovieData) currentMovieData.is_liked = isLiked; 
+    }
+
+    async function toggleMovieLike() {
+        if (!currentMovieId || !currentMovieData) return;
+        const isCurrentlyLiked = currentMovieData.is_liked;
+        const method = isCurrentlyLiked ? 'DELETE' : 'POST';
+        try {
+            const response = await fetch(`${API_BASE_URL}/items/${currentMovieId}/like`, { method });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error ${response.status}`);
+            }
+            const result = await response.json();
+            updateLikeButton(result.is_liked);
+        } catch (error) {
+            console.error("Error toggling like:", error);
+            alert(`操作失败: ${error.message}`);
+        }
+    }
+
+    function openCollectionsModal() {
+        collectionsModal.style.display = "block";
+        loadMovieCollectionsData();
+    }
+    function closeCollectionsModal() {
+        collectionsModal.style.display = "none";
+    }
+    window.onclick = function(event) { 
+        if (event.target == collectionsModal) {
+            closeCollectionsModal();
+        }
+    }
+
+    async function loadMovieCollectionsData() {
+        if (!currentMovieData || !currentMovieId) return;
+
+        const currentCollectionsNames = currentMovieData.member_of_collections.map(c => escapeHtml(c.name)).join(', ') || '无';
+        currentCollectionsListSpan.textContent = currentCollectionsNames;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/movie_collections`);
+            if (!response.ok) throw new Error('Failed to fetch collections');
+            const allCollections = await response.json();
+            
+            availableCollectionsListDiv.innerHTML = '';
+            if (allCollections.length === 0) {
+                availableCollectionsListDiv.innerHTML = '<p>暂无可用收藏夹。</p>';
+            } else {
+                allCollections.forEach(collection => {
+                    const isMember = currentMovieData.member_of_collections.some(mc => mc.id === collection.id);
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'collection-list-item';
+                    itemDiv.innerHTML = `
+                        <span>${escapeHtml(collection.name)}</span>
+                        <button class="action-button" onclick="toggleMovieInCollection(${collection.id}, ${isMember})" 
+                                style="${isMember ? 'background-color:var(--like-color)' : ''}">
+                            ${isMember ? '从中移除' : '添加到此'}
+                        </button>
+                    `;
+                    availableCollectionsListDiv.appendChild(itemDiv);
+                });
+            }
+        } catch (error) {
+            console.error("Error loading collections data:", error);
+            availableCollectionsListDiv.innerHTML = '<p>加载收藏夹列表失败。</p>';
+        }
+    }
+
+    async function toggleMovieInCollection(collectionId, isCurrentlyMember) {
+        if (!currentMovieId) return;
+        const method = isCurrentlyMember ? 'DELETE' : 'POST';
+        const movieIdForApi = currentMovieData.Id; 
+        if (!movieIdForApi) {
+            alert("无法确定影片的内部ID，操作失败。");
+            console.error("toggleMovieInCollection: currentMovieData.Id is missing.");
+            return;
+        }
+
+        const url = isCurrentlyMember 
+            ? `${API_BASE_URL}/movie_collection/${collectionId}/movie/${movieIdForApi}` 
+            : `${API_BASE_URL}/movie_collection/${collectionId}/movies`; 
+
+        let fetchOptions = { method };
+        if (method === 'POST') {
+            fetchOptions.headers = { 'Content-Type': 'application/json' };
+            fetchOptions.body = JSON.stringify({ movie_id: movieIdForApi }); 
+        }
+        
+        try {
+            const response = await fetch(url, fetchOptions);
+            if (!response.ok) {
+                let errorText = `HTTP error ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorText = errorData.error || errorData.message || errorText;
+                } catch (e) { /* Ignore if response is not JSON */ }
+                throw new Error(errorText);
+            }
+            
+            const itemResponse = await fetch(`${API_BASE_URL}/items/${getItemIdFromUrl()}`); 
+            if (!itemResponse.ok) throw new Error("Failed to refetch movie details after collection update.");
+            currentMovieData = await itemResponse.json();
+            if (currentMovieData.Id) currentMovieId = currentMovieData.Id; 
+
+            loadMovieCollectionsData(); 
+        } catch (error) {
+            console.error("Error toggling movie in collection:", error);
+            alert(`操作收藏夹失败: ${error.message}`);
+        }
+    }
+    
+    async function createNewMovieCollection() {
+        const collectionName = newCollectionNameInput.value.trim();
+        if (!collectionName) {
+            alert("收藏夹名称不能为空！");
+            return;
+        }
+        if (!currentMovieId || !currentMovieData || !currentMovieData.Id) {
+            alert("影片信息不完整，无法创建收藏夹。");
+            return;
+        }
+        const movieIdForApi = currentMovieData.Id; 
+
+        try {
+            let response = await fetch(`${API_BASE_URL}/movie_collections`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: collectionName })
+            });
+            let newOrExistingCollection;
+            if (!response.ok) {
+                 const errorData = await response.json();
+                 if (response.status === 409) { 
+                    alert(`收藏夹 "${escapeHtml(collectionName)}" 已存在。将尝试添加到现有收藏夹。`);
+                    const collectionsList = await (await fetch(`${API_BASE_URL}/movie_collections`)).json();
+                    newOrExistingCollection = collectionsList.find(c => c.name === collectionName);
+                    if (!newOrExistingCollection) {
+                        throw new Error("无法找到已存在的收藏夹进行添加。");
+                    }
+                 } else {
+                    throw new Error(errorData.error || `Failed to create collection (HTTP ${response.status})`);
+                 }
+            } else {
+                newOrExistingCollection = await response.json();
+            }
+            
+            const addToCollectionResponse = await fetch(`${API_BASE_URL}/movie_collection/${newOrExistingCollection.id}/movies`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ movie_id: movieIdForApi }) 
+            });
+            if (!addToCollectionResponse.ok) {
+                const addError = await addToCollectionResponse.json();
+                throw new Error(addError.message || addError.error || "Failed to add movie to new collection");
+            }
+
+            newCollectionNameInput.value = ''; 
+            const itemResponse = await fetch(`${API_BASE_URL}/items/${getItemIdFromUrl()}`);
+            if (!itemResponse.ok) throw new Error("Failed to refetch movie details after new collection.");
+            currentMovieData = await itemResponse.json();
+            if (currentMovieData.Id) currentMovieId = currentMovieData.Id;
+
+            loadMovieCollectionsData(); 
+        } catch (error) {
+            console.error("Error creating new collection and adding movie:", error);
+            alert(`创建收藏夹失败: ${error.message}`);
+        }
+    }
+
+    async function fetchMovieComments() {
+        if (!currentMovieId) return;
+        commentsListDiv.innerHTML = '<p>加载评论中...</p>';
+        try {
+            const response = await fetch(`${API_BASE_URL}/items/${currentMovieId}/comments`);
+            if (!response.ok) throw new Error('Failed to fetch comments');
+            const comments = await response.json();
+            renderComments(comments);
+        } catch (error) {
+            console.error("Error fetching comments:", error);
+            commentsListDiv.innerHTML = '<p>加载评论失败。</p>';
+        }
+    }
+
+    function renderComments(comments) {
+        commentsListDiv.innerHTML = '';
+        if (comments.length === 0) {
+            commentsListDiv.innerHTML = '<p>暂无评论。</p>';
+            return;
+        }
+        comments.forEach(comment => {
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'comment-item';
+            const userNameP = document.createElement('p');
+            userNameP.innerHTML = `<strong>${escapeHtml(comment.user_name || 'Anonymous')}</strong>`;
+            const textP = document.createElement('p');
+            textP.textContent = escapeHtml(comment.comment_text);
+            const metaP = document.createElement('p');
+            metaP.className = 'comment-meta';
+            metaP.textContent = `发表于: ${new Date(comment.timestamp).toLocaleString()}`;
+            
+            commentDiv.appendChild(userNameP);
+            commentDiv.appendChild(textP);
+            commentDiv.appendChild(metaP);
+            commentsListDiv.appendChild(commentDiv);
+        });
+    }
+
+    async function submitMovieComment() {
+        if (!currentMovieId) return;
+        const userName = commentUserNameInput.value.trim() || 'Anonymous';
+        const commentText = commentTextInput.value.trim();
+
+        if (!commentText) {
+            alert("评论内容不能为空！");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/items/${currentMovieId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_name: userName, comment_text: commentText })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error ${response.status}`);
+            }
+            commentTextInput.value = ''; 
+            fetchMovieComments(); 
+        } catch (error) {
+            console.error("Error submitting comment:", error);
+            alert(`提交评论失败: ${error.message}`);
+        }
+    }
+    
+    function playWithWebPlayer() {
+        if (!currentMovieData || !currentMovieId) { 
+            webPlayFeedback.textContent = '错误：影片数据不完整。';
+            return;
+        }
+        const streamUrl = `${API_BASE_URL}/stream/${currentMovieId}`; 
+
+        webVideoPlayer.src = streamUrl;
+        videoPlayerContainer.style.display = 'block';
+        webPlayFeedback.textContent = '正在加载视频...';
+        webPlayBtn.disabled = true;
+
+        webVideoPlayer.load();
+        webVideoPlayer.play().then(() => {
+            webPlayFeedback.textContent = '视频已开始播放。';
+        }).catch(error => {
+            console.error('Video playback failed:', error);
+            webPlayFeedback.textContent = `播放失败: ${error.message || '不支持的媒体格式或网络错误。'}`;
+        }).finally(() => {
+            webPlayBtn.disabled = false;
+        });
+    }
+
+    function playWithPotPlayer() {
+        if (!currentMovieData || !currentMovieId) { 
+            playFeedback.textContent = '错误：影片数据不完整。';
+            potPlayerBtn.disabled = false;
+            return;
+        }
+        let fullStreamUrl;
+        if (API_BASE_URL.startsWith('http')) {
+            fullStreamUrl = `${API_BASE_URL}/stream/${currentMovieId}`;
+        } else {
+            fullStreamUrl = `${window.location.origin}${API_BASE_URL}/stream/${currentMovieId}`;
+        }
+        potPlayerBtn.disabled = true;
+        playFeedback.textContent = '正在准备播放...';
+        const potplayerLaunchUrl = `potplayer://${fullStreamUrl}`;
+        console.log("Attempting to launch PotPlayer with HTTP stream URL:", potplayerLaunchUrl);
+        try {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = potplayerLaunchUrl; 
+            document.body.appendChild(iframe);
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            }, 1000);
+            setTimeout(() => {
+                playFeedback.textContent = '已尝试启动，请检查 PotPlayer。';
+                potPlayerBtn.disabled = false;
+            }, 2000);
+        } catch (e) {
+            console.error("Error launching PotPlayer:", e);
+            playFeedback.textContent = `启动 PotPlayer 失败: ${e.message}.`;
+            potPlayerBtn.disabled = false;
+        }
+    }
+
+	function createScrollableSection(contentContainerId) {
+		const wrapper = document.createElement('div');
+		wrapper.className = 'horizontal-scroll-wrapper';
+		const scrollContent = document.createElement('div');
+		scrollContent.id = contentContainerId;
+		scrollContent.className = 'scroll-content-container';
+		wrapper.appendChild(scrollContent);
+		return { wrapper, contentDiv: scrollContent };
+	}
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const itemIdFromUrl = getItemIdFromUrl();
+      fetchDetailsAndRelated(itemIdFromUrl);
+    });
+  </script>
+
+</body>
+</html>
