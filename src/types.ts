@@ -2,19 +2,20 @@ import { D1Database } from '@cloudflare/workers-types';
 import { R2Bucket } from '@cloudflare/workers-types';
 
 export interface Env {
-  DB: D1Database;
-  MANGA_DB: D1Database;
-  ASSETS_BUCKET: R2Bucket;       // For posters, covers, thumbs
-  STREAMS_BUCKET: R2Bucket;      // For movie video files
-  STATIC_FILES_BUCKET: R2Bucket; // For HTML, CSS, JS
+  DB_MOVIES: D1Database; // <--- 更新
+  DB_MANGA: D1Database;  // <--- 更新
+
+  MANGA_BUCKET: R2Bucket;
+  MOVIES_ASSETS_BUCKET: R2Bucket;
+  STATIC_FILES_BUCKET: R2Bucket;
+  // STREAMS_BUCKET?: R2Bucket; // 可选
 
   LOGIN_CODE: string;
   SESSION_SECRET_KEY: string;
-  MANGA_IMAGES_R2_PREFIX: string; // e.g., "manga_root_folder_in_r2"
-  MOVIE_POSTERS_R2_PREFIX: string;
-  MOVIE_FANART_R2_PREFIX: string;
-  ACTOR_THUMBS_R2_PREFIX: string;
-  MOVIE_STREAMS_R2_PREFIX: string;
+  MANGA_R2_BASE_PREFIX: string;
+  MOVIE_ASSETS_R2_BASE_PREFIX: string;
+  ACTOR_THUMBS_R2_SUBFOLDER: string;
+  // MOVIE_STREAMS_R2_PREFIX?: string; // 可选
 }
 
 // 根据你的数据库结构定义类型
