@@ -31,8 +31,46 @@ binding = "MOVIES_BUCKET" # 在 Worker 代码中访问的绑定名称
 bucket_name = "movies"    # R2 存储桶的实际名称
 # --- 环境变量 / 密钥 ---
 # 对于非敏感变量，可以在这里定义:
-[vars]
 
+[vars]
+LOGIN_CODE = "114514"
+
+
+# === R2 路径前缀 ===
+# 这些前缀是你的 R2 桶内部的目录结构，用于 TypeScript 代码构建完整的对象键
+# 从你的描述中推断：
+
+# 漫画图片:
+# R2 桶: manga
+# 典型路径: manga/manga/2022/(C100) [OrangeMaru (YD)] 紫の夢[中国翻訳]/01.webp
+# 数据库 manga.path: "2022/(C100) [OrangeMaru (YD)] 紫の夢[中国翻訳]" (假设这是去掉两层 "manga/" 后的部分)
+# 数据库 manga.cover_image: "01.webp" (或者特定封面文件名)
+# 服务 /data/manga_images/2022/(C100) [OrangeMaru (YD)] 紫の夢[中国翻訳]/01.webp 时
+# 需要构建的 R2 Key: MANGA_R2_BASE_PREFIX + manga.path + "/" + image_filename
+# MANGA_R2_BASE_PREFIX 应该是你桶内所有漫画文件共同的顶级路径（如果有多层）
+# 从你的例子看，R2 key 似乎是 "manga/manga/" + manga.path + "/" + image_filename
+# 如果 manga.path 已经是 "manga/manga/2022/...", 那么 MANGA_R2_BASE_PREFIX 可以是 ""
+# 或者如果 manga.path 是 "2022/...", 那么 MANGA_R2_BASE_PREFIX 是 "manga/manga"
+# 我们选择后者，让 manga.path 更纯粹一些。
+MANGA_R2_BASE_PREFIX = "manga/manga" # R2 桶 "manga" 内部的基础路径
+
+# 电影海报:
+# R2 桶: movies
+# 典型路径: movies/movies/JAV/#整理完成/#impact/[AP-649]/fanart.avif
+# 数据库 movies.fanart_file_path: "JAV/#整理完成/#impact/[AP-649]/fanart.avif" (假设是去掉两层 "movies/" 后的部分)
+# 数据库 movies.poster_file_path: 类似结构
+# 服务 /api_movies/images/fanart/movie_id 时
+# 需要构建的 R2 Key: MOVIE_ASSETS_R2_BASE_PREFIX + movie.fanart_file_path
+MOVIE_ASSETS_R2_BASE_PREFIX = "movies/movies" # R2 桶 "movies" 内部的基础路径
+
+# 演员图片:
+# R2 桶: movies
+# 典型路径: movies/movies/actors_photo/演员图片/文件夹下/演员名.jpg
+# 数据库 actors_info.thumb_path: "演员名.jpg" (假设)
+# 服务 /api_movies/images/actor_thumb/演员名 时
+# 需要构建的 R2 Key: MOVIE_ASSETS_R2_BASE_PREFIX + ACTOR_THUMBS_SUBFOLDER + actor_name_from_db (thumb_path)
+# ACTOR_THUMBS_SUBFOLDER 会是 "actors_photo/演员图片/文件夹下/" (注意末尾的 /)
+ACTOR_THUMBS_R2_SUBFOLDER = "actors_photo/演员图片/文件夹下/" # 相对于 MOVIE_ASSETS_R2_BASE_PREFIX
 
 # 静态资源 (static/下的CSS, JS)：最佳实践是上传到 R2。
 # 然后你的 FastAPI 应用生成指向 R2 的 URL，或者直接从 R2 获取并提供它们。
