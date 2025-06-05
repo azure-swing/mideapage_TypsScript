@@ -24,6 +24,7 @@ export async function generateJwt(c: Context<{ Bindings: Env }>) {
   const payload: JwtPayload = { loggedIn: true };
   const token = await sign(payload, c.env.SESSION_SECRET_KEY);
   return token;
+}
 
 export async function verifyJwt(c: Context<{ Bindings: Env }>, token: string): Promise<JwtPayload | null> {
   try {
