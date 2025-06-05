@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { Env, Movie, Comment as MovieComment, CollectionInfo, ActorInfoDb } from './types';
+import { Env, Movie, Comment as MovieComment, CollectionInfo, ActorInfoDb, PersonInfo, StudioInfo } from './types'; // Added PersonInfo, StudioInfo
 import { getClientIp } from './auth';
 import { movieRowToDict, buildMovieWhereClauseAndParams, parseJsonField } from './dbUtils';
 import { serveFileFromR2 } from './r2Utils';
@@ -16,12 +16,11 @@ movieApiApp.get('/items', async (c) => {
 
   const argsDict = { ...query, StartIndex: startIndex, Limit: limit, SortBy: sortBy, SortOrder: sortOrder };
 
-  // Sort mapping (simplified, ensure db_sort_by is a valid column)
   const sortMap: Record<string, string> = {
       "SortName": "title", "Name": "title",
       "DateCreated": "last_scanned_date", "PremiereDate": "premiered",
       "CommunityRating": "rating", "RunTimeTicks": "runtime",
-      "movieCount": "id" // For actors/directors view this might be different
+      "movieCount": "id" 
   };
   let dbSortBy = sortMap[sortBy] || "premiered";
   const validSortCols = ["title", "rating", "runtime", "premiered", "uniqueid_num", "last_scanned_date", "id"];
@@ -30,8 +29,8 @@ movieApiApp.get('/items', async (c) => {
 
   const { clause, params: whereParams } = buildMovieWhereClauseAndParams(argsDict);
 
-  const countQuery = c.env.DB.prepare(`SELECT COUNT(id) as total FROM movies WHERE ${clause}`);
-  const dataQuery = c.env.DB.prepare(`SELECT * FROM movies WHERE ${clause} ORDER BY ${dbSortBy} ${dbSortOrder} NULLS LAST LIMIT ? OFFSET ?`);
+  const countQuery = c.env.DB_MOVIES.prepare(`SELECT COUNT(id) as total FROM movies WHERE ${clause}`);
+  const dataQuery = c.env.DB_MOVIES.prepare(`SELECT * FROM movies WHERE ${clause} ORDER BY ${dbSortBy} ${dbSortOrder} NULLS LAST LIMIT ? OFFSET ?`);
 
   try {
     const totalResult = await countQuery.bind(...whereParams).first<{ total: number }>();
@@ -39,7 +38,7 @@ movieApiApp.get('/items', async (c) => {
 
     const itemsRaw = await dataQuery.bind(...whereParams, limit, startIndex).all();
     
-    const itemsListPromises = (itemsRaw.results || []).map(row => movieRowToDict(c, row, c.env.DB));
+    const itemsListPromises = (itemsRaw.results || []).map(row => movieRowToDict(c, row, c.env.DB_MOVIES));
     const itemsList = (await Promise.all(itemsListPromises)).filter(item => item !== null);
 
     return c.json({
@@ -61,15 +60,15 @@ movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
   let movieRaw: any;
 
   if (!isNaN(parseInt(itemIdOrNum, 10))) {
-    movieRaw = await c.env.DB.prepare("SELECT * FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
+    movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
   } else {
-    movieRaw = await c.env.DB.prepare("SELECT * FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
+    movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
   }
 
   if (!movieRaw) {
     return c.json({ error: "Movie not found" }, 404);
   }
-  const movieDict = await movieRowToDict(c, movieRaw, c.env.DB);
+  const movieDict = await movieRowToDict(c, movieRaw, c.env.DB_MOVIES);
   return c.json(movieDict);
 });
 
@@ -83,9 +82,9 @@ movieApiApp.post('/items/:item_id_or_num{.+}', async (c) => {
 
     let row: { id: number, title: string } | null = null;
     if (!isNaN(parseInt(itemIdOrNum, 10))) {
-        row = await c.env.DB.prepare("SELECT id, title FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
+        row = await c.env.DB_MOVIES.prepare("SELECT id, title FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
     } else {
-        row = await c.env.DB.prepare("SELECT id, title FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
+        row = await c.env.DB_MOVIES.prepare("SELECT id, title FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
     }
 
     if (row) {
@@ -98,8 +97,8 @@ movieApiApp.post('/items/:item_id_or_num{.+}', async (c) => {
     }
 
     try {
-        await c.env.DB.prepare("UPDATE movies SET is_liked = 1 WHERE id = ?").bind(movieId).run();
-        console.info(`${clientIp} - Liked movie: '${movieTitle}' (ID/Num: ${itemIdOrNum})`); // Activity log
+        await c.env.DB_MOVIES.prepare("UPDATE movies SET is_liked = 1 WHERE id = ?").bind(movieId).run();
+        console.info(`${clientIp} - Liked movie: '${movieTitle}' (ID/Num: ${itemIdOrNum})`); 
         return c.json({ message: "Movie liked", is_liked: true });
     } catch (e: any) {
         console.error(`Error liking movie ${movieId}: ${e.message}`);
@@ -116,9 +115,9 @@ movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
     
     let row: { id: number, title: string } | null = null;
     if (!isNaN(parseInt(itemIdOrNum, 10))) {
-        row = await c.env.DB.prepare("SELECT id, title FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
+        row = await c.env.DB_MOVIES.prepare("SELECT id, title FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
     } else {
-        row = await c.env.DB.prepare("SELECT id, title FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
+        row = await c.env.DB_MOVIES.prepare("SELECT id, title FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
     }
 
     if (row) {
@@ -130,8 +129,8 @@ movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
         return c.json({ error: "Movie not found" }, 404);
     }
     try {
-        await c.env.DB.prepare("UPDATE movies SET is_liked = 0 WHERE id = ?").bind(movieId).run();
-        console.info(`${clientIp} - Unliked movie: '${movieTitle}' (ID/Num: ${itemIdOrNum})`); // Activity log
+        await c.env.DB_MOVIES.prepare("UPDATE movies SET is_liked = 0 WHERE id = ?").bind(movieId).run();
+        console.info(`${clientIp} - Unliked movie: '${movieTitle}' (ID/Num: ${itemIdOrNum})`); 
         return c.json({ message: "Movie unliked", is_liked: false });
     } catch (e: any) {
         console.error(`Error unliking movie ${movieId}: ${e.message}`);
@@ -146,14 +145,12 @@ movieApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
   let dbRow: { poster_file_path: string } | null = null;
 
   if (!isNaN(parseInt(movieIdOrNum, 10))) {
-    dbRow = await c.env.DB.prepare("SELECT poster_file_path FROM movies WHERE id = ?").bind(parseInt(movieIdOrNum, 10)).first();
+    dbRow = await c.env.DB_MOVIES.prepare("SELECT poster_file_path FROM movies WHERE id = ?").bind(parseInt(movieIdOrNum, 10)).first();
   } else {
-    dbRow = await c.env.DB.prepare("SELECT poster_file_path FROM movies WHERE uniqueid_num = ?").bind(movieIdOrNum).first();
+    dbRow = await c.env.DB_MOVIES.prepare("SELECT poster_file_path FROM movies WHERE uniqueid_num = ?").bind(movieIdOrNum).first();
   }
 
   if (dbRow && dbRow.poster_file_path) {
-    // Assuming poster_file_path IS THE R2 KEY or can be constructed easily
-    // e.g. if poster_file_path = "movie_123_poster.jpg"
     const r2Key = `${c.env.MOVIE_POSTERS_R2_PREFIX}/${dbRow.poster_file_path}`.replace(/\/\//g, '/');
     return serveFileFromR2(c, c.env.ASSETS_BUCKET, r2Key);
   }
@@ -165,9 +162,9 @@ movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
   const movieIdOrNum = c.req.param('movie_id_or_num');
   let dbRow: { fanart_file_path: string } | null = null;
   if (!isNaN(parseInt(movieIdOrNum, 10))) {
-    dbRow = await c.env.DB.prepare("SELECT fanart_file_path FROM movies WHERE id = ?").bind(parseInt(movieIdOrNum,10)).first();
+    dbRow = await c.env.DB_MOVIES.prepare("SELECT fanart_file_path FROM movies WHERE id = ?").bind(parseInt(movieIdOrNum,10)).first();
   } else {
-    dbRow = await c.env.DB.prepare("SELECT fanart_file_path FROM movies WHERE uniqueid_num = ?").bind(movieIdOrNum).first();
+    dbRow = await c.env.DB_MOVIES.prepare("SELECT fanart_file_path FROM movies WHERE uniqueid_num = ?").bind(movieIdOrNum).first();
   }
 
   if (dbRow && dbRow.fanart_file_path) {
@@ -180,12 +177,11 @@ movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
 // GET /api_movies/images/actor_thumb/:actor_name
 movieApiApp.get('/images/actor_thumb/:actor_name{.+}', async (c) => {
     const actorName = c.req.param('actor_name');
-    const dbRow: { thumb_path: string } | null = await c.env.DB.prepare("SELECT thumb_path FROM actors_info WHERE name = ?")
+    const dbRow: { thumb_path: string } | null = await c.env.DB_MOVIES.prepare("SELECT thumb_path FROM actors_info WHERE name = ?")
         .bind(actorName)
         .first();
 
     if (dbRow && dbRow.thumb_path) {
-        // Assuming thumb_path is the R2 key relative to ACTOR_THUMBS_R2_PREFIX
         const r2Key = `${c.env.ACTOR_THUMBS_R2_PREFIX}/${dbRow.thumb_path}`.replace(/\/\//g, '/');
         return serveFileFromR2(c, c.env.ASSETS_BUCKET, r2Key);
     }
@@ -199,9 +195,9 @@ movieApiApp.get('/stream/:item_id_or_num{.+}', async (c) => {
     let movieRaw: { id: number, title: string, strm_files: string } | null = null;
 
     if (!isNaN(parseInt(itemIdOrNum, 10))) {
-        movieRaw = await c.env.DB.prepare("SELECT id, title, strm_files FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
+        movieRaw = await c.env.DB_MOVIES.prepare("SELECT id, title, strm_files FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
     } else {
-        movieRaw = await c.env.DB.prepare("SELECT id, title, strm_files FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
+        movieRaw = await c.env.DB_MOVIES.prepare("SELECT id, title, strm_files FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
     }
     
     if (!movieRaw) {
@@ -212,8 +208,6 @@ movieApiApp.get('/stream/:item_id_or_num{.+}', async (c) => {
     if (!movieRaw.strm_files) {
         return c.json({ error: "Stream files not found for this movie" }, 404);
     }
-    // strm_files is a JSON string, e.g. '[{"url": "r2_key_for_video.mp4", "path": "original_local_path.mp4"}]'
-    // or just '["r2_key_for_video.mp4"]'
     const strmFilesList = parseJsonField<any>(movieRaw.strm_files);
 
     if (!strmFilesList || strmFilesList.length === 0) {
@@ -226,19 +220,21 @@ movieApiApp.get('/stream/:item_id_or_num{.+}', async (c) => {
     if (typeof firstStreamEntry === 'string') {
         streamR2Key = firstStreamEntry;
     } else if (typeof firstStreamEntry === 'object' && firstStreamEntry !== null && firstStreamEntry.url) {
-        streamR2Key = firstStreamEntry.url; // Assuming 'url' field now holds the R2 key
+        streamR2Key = firstStreamEntry.url; 
     }
 
     if (!streamR2Key) {
          return c.json({ error: "Valid R2 key for video file not found in strm_files" }, 404);
     }
     
-    // Prepend MOVIE_STREAMS_R2_PREFIX if streamR2Key is relative within that prefix
     const fullR2Key = `${c.env.MOVIE_STREAMS_R2_PREFIX}/${streamR2Key}`.replace(/\/\//g, '/');
     
-    // Log actual playback start in activity log (simplified here)
     console.info(`${clientIp} - Started playing movie: '${movieRaw.title}' (ID/Num: ${itemIdOrNum}) from R2 key: ${fullR2Key}`);
-    return serveFileFromR2(c, c.env.STREAMS_BUCKET, fullR2Key, 'public, max-age=3600'); // Cache for 1 hour
+    if (!c.env.STREAMS_BUCKET) { // Check if STREAMS_BUCKET is bound
+        console.error("STREAMS_BUCKET is not defined in environment bindings.");
+        return c.text("Stream service misconfiguration", 500);
+    }
+    return serveFileFromR2(c, c.env.STREAMS_BUCKET, fullR2Key, 'public, max-age=3600');
 });
 
 
@@ -251,7 +247,7 @@ movieApiApp.get('/genres', async (c) => {
         query += " WHERE root_folder = ?";
         params.push(parentId);
     }
-    const { results } = await c.env.DB.prepare(query).bind(...params).all<{genres: string}>();
+    const { results } = await c.env.DB_MOVIES.prepare(query).bind(...params).all<{genres: string}>();
     const allGenreNames = new Set<string>();
     (results || []).forEach(row => {
         parseJsonField<string>(row.genres).forEach(gName => {
@@ -263,13 +259,12 @@ movieApiApp.get('/genres', async (c) => {
 
 // GET /api_movies/libraries
 movieApiApp.get('/libraries', async (c) => {
-    const { results } = await c.env.DB.prepare(
+    const { results } = await c.env.DB_MOVIES.prepare(
         "SELECT DISTINCT root_folder FROM movies WHERE root_folder IS NOT NULL AND root_folder != ''"
     ).all<{root_folder: string}>();
     
     const libs = (results || []).map(row => {
         const fullPath = row.root_folder;
-        // Basic name extraction from path, adjust if needed
         const name = fullPath.split(/[/\\]/).pop() || fullPath;
         return { Name: name, Id: fullPath };
     }).sort((a,b) => a.Name.localeCompare(b.Name));
@@ -278,8 +273,8 @@ movieApiApp.get('/libraries', async (c) => {
 
 // GET /api_movies/persons (Actors, Directors)
 movieApiApp.get('/persons', async (c) => {
-    const personType = c.req.query('PersonType') || 'Actor'; // Actor or Director
-    const parentId = c.req.query('ParentId'); // Library filter
+    const personType = c.req.query('PersonType') || 'Actor'; 
+    const parentId = c.req.query('ParentId'); 
 
     const personsMap: Record<string, PersonInfo> = {};
 
@@ -295,12 +290,12 @@ movieApiApp.get('/persons', async (c) => {
         movieQuery += " WHERE " + conditions.join(" AND ");
     }
 
-    const movieRowsResult = await c.env.DB.prepare(movieQuery).bind(...params).all<Movie>();
+    const movieRowsResult = await c.env.DB_MOVIES.prepare(movieQuery).bind(...params).all<Movie>();
     const movieRows = movieRowsResult.results || [];
 
     const actorThumbs: Record<string, string> = {};
     if (personType.toLowerCase() === 'actor') {
-        const thumbRowsResult = await c.env.DB.prepare(
+        const thumbRowsResult = await c.env.DB_MOVIES.prepare(
             "SELECT name, thumb_path FROM actors_info WHERE thumb_path IS NOT NULL AND thumb_path != ''"
         ).all<ActorInfoDb>();
         (thumbRowsResult.results || []).forEach(tr => {
@@ -310,23 +305,21 @@ movieApiApp.get('/persons', async (c) => {
     
     movieRows.forEach(movie => {
         if (personType.toLowerCase() === 'actor') {
-            const movieActors = parseJsonField<{name: string}>(movie.actors);
+            const movieActors = parseJsonField<{name: string, role?:string}>(movie.actors); // Ensure role is parsed if present
             movieActors.forEach(actorData => {
                 const name = actorData.name;
                 if (name) {
                     if (!personsMap[name]) {
                         let imageTag: string | undefined = undefined;
                         if (actorThumbs[name]) {
-                            // Path to R2 object for actor thumb
                             imageTag = `${c.req.url.origin}/api_movies/images/actor_thumb/${encodeURIComponent(name)}`;
                         }
-                        personsMap[name] = { Name: name, Id: name, MovieCount: 0, Type: 'Actor', ImageTag: imageTag };
+                        personsMap[name] = { Name: name, Id: name, MovieCount: 0, Type: 'Actor', ImageTag: imageTag, Role: actorData.role };
                     }
                     personsMap[name].MovieCount = (personsMap[name].MovieCount || 0) + 1;
                 }
             });
         } else if (personType.toLowerCase() === 'director' && movie.director) {
-            // Assuming director is a simple string for now, or first element if JSON array
             const directors = parseJsonField<string>(movie.director);
             directors.forEach(name => {
                  if (name) {
@@ -353,7 +346,7 @@ movieApiApp.get('/studios', async (c) => {
         query += " AND root_folder = ?";
         params.push(parentId);
     }
-    const { results } = await c.env.DB.prepare(query).bind(...params).all<{studio: string}>();
+    const { results } = await c.env.DB_MOVIES.prepare(query).bind(...params).all<{studio: string}>();
     (results || []).forEach(row => {
         const name = row.studio;
         if (!studiosMap[name]) studiosMap[name] = { Name: name, Id: name, MovieCount: 0 };
@@ -362,15 +355,6 @@ movieApiApp.get('/studios', async (c) => {
     const sortedStudios = Object.values(studiosMap).sort((a, b) => (b.MovieCount || 0) - (a.MovieCount || 0));
     return c.json(sortedStudios);
 });
-
-// Other movie API endpoints (collections, comments, series, precomputed_related)
-// would follow a similar pattern of:
-// 1. Defining the Hono route.
-// 2. Getting params (path, query, body).
-// 3. Interacting with D1 (c.env.DB.prepare(...).bind(...).run()/first()/all()).
-// 4. Formatting the response (often using movieRowToDict or similar helpers).
-// 5. Logging activity.
-// Remember to update DB paths to R2 keys.
 
 // GET /api_movies/series
 movieApiApp.get('/series', async (c) => {
@@ -385,11 +369,11 @@ movieApiApp.get('/series', async (c) => {
     }
     query += " ORDER BY premiered DESC";
 
-    const movieRowsResult = await c.env.DB.prepare(query).bind(...params).all<Movie>();
+    const movieRowsResult = await c.env.DB_MOVIES.prepare(query).bind(...params).all<Movie>();
     const movieRows = movieRowsResult.results || [];
 
     movieRows.forEach(movie => {
-        const name = movie.set_name!; // Assert non-null as per query
+        const name = movie.set_name!; 
         if (!seriesMap[name]) {
             seriesMap[name] = {
                 Id: name, Name: name, ChildCount: 0, Genres: new Set<string>(),
@@ -428,9 +412,9 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
 
     let sourceMovieRow: { id: number } | null = null;
     if (!isNaN(parseInt(itemIdOrNum, 10))) {
-        sourceMovieRow = await c.env.DB.prepare("SELECT id FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
+        sourceMovieRow = await c.env.DB_MOVIES.prepare("SELECT id FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
     } else {
-        sourceMovieRow = await c.env.DB.prepare("SELECT id FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
+        sourceMovieRow = await c.env.DB_MOVIES.prepare("SELECT id FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
     }
     if (sourceMovieRow) sourceMovieId = sourceMovieRow.id;
 
@@ -438,7 +422,7 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
         return c.json({ error: "Source movie not found" }, 404);
     }
 
-    const primaryRelatedResult = await c.env.DB.prepare(`
+    const primaryRelatedResult = await c.env.DB_MOVIES.prepare(`
         SELECT m.*
         FROM precomputed_related_movies prm
         JOIN movies m ON prm.related_movie_id = m.id
@@ -447,23 +431,23 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
         LIMIT ?
     `).bind(sourceMovieId, MAX_PRIMARY_RELATED).all<Movie>();
     
-    const primaryRelatedPromises = (primaryRelatedResult.results || []).map(row => movieRowToDict(c, row, c.env.DB));
+    const primaryRelatedPromises = (primaryRelatedResult.results || []).map(row => movieRowToDict(c, row, c.env.DB_MOVIES));
     const primaryRelatedList = (await Promise.all(primaryRelatedPromises)).filter(Boolean) as Movie[];
 
     const relatedIdsSoFar = new Set(primaryRelatedList.map(m => m.Id));
     let genreRandomRelatedList: Movie[] = [];
 
     if (NUM_RANDOM_GENRE_PICKS > 0) {
-        const genreCandidatesResult = await c.env.DB.prepare(`
+        const genreCandidatesResult = await c.env.DB_MOVIES.prepare(`
             SELECT m.*
             FROM precomputed_related_movies prm
             JOIN movies m ON prm.related_movie_id = m.id
             WHERE prm.source_movie_id = ? AND prm.relation_type = 'genre_random_pick'
-            ORDER BY RANDOM() -- D1 uses RANDOM() instead of prm.relevance_score DESC, RANDOM()
+            ORDER BY RANDOM() 
             LIMIT ?
         `).bind(sourceMovieId, MAX_GENRE_CANDIDATES).all<Movie>();
         
-        const genreCandidatePromises = (genreCandidatesResult.results || []).map(row => movieRowToDict(c, row, c.env.DB));
+        const genreCandidatePromises = (genreCandidatesResult.results || []).map(row => movieRowToDict(c, row, c.env.DB_MOVIES));
         const genreCandidatesList = (await Promise.all(genreCandidatePromises)).filter(Boolean) as Movie[];
 
         for (const movieDict of genreCandidatesList) {
@@ -477,10 +461,9 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
     return c.json([...primaryRelatedList, ...genreRandomRelatedList]);
 });
 
-// Collections and Comments APIs need to be translated similarly.
-// Example: GET /api_movies/movie_collections
+// GET /api_movies/movie_collections
 movieApiApp.get('/movie_collections', async (c) => {
-    const { results } = await c.env.DB.prepare(
+    const { results } = await c.env.DB_MOVIES.prepare(
         "SELECT id, name FROM movie_collections ORDER BY name ASC"
     ).all<CollectionInfo>();
     return c.json(results || []);
@@ -496,9 +479,9 @@ movieApiApp.post('/movie_collections', async (c) => {
         return c.json({ error: "Name required" }, 400);
     }
     try {
-        const result = await c.env.DB.prepare("INSERT INTO movie_collections (name) VALUES (?) RETURNING id")
+        const result = await c.env.DB_MOVIES.prepare("INSERT INTO movie_collections (name) VALUES (?) RETURNING id")
             .bind(collectionName)
-            .first<{id: number}>(); // Use RETURNING id to get the new ID
+            .first<{id: number}>(); 
         if (result && result.id) {
             console.info(`${clientIp} - Created movie collection: '${collectionName}' (ID: ${result.id})`);
             return c.json({ id: result.id, name: collectionName }, 201);
@@ -506,11 +489,10 @@ movieApiApp.post('/movie_collections', async (c) => {
             throw new Error("Failed to get ID of new collection.");
         }
     } catch (e: any) {
-        if (e.message?.includes("UNIQUE constraint failed")) { // D1 error for unique constraint
+        if (e.message?.includes("UNIQUE constraint failed")) { 
             return c.json({ error: "Collection name already exists" }, 409);
         }
         console.error(`Error creating movie collection: ${e.message}`);
         return c.json({ error: "Database error", details: e.message }, 500);
     }
 });
-// ... And so on for other movie API endpoints
