@@ -17,8 +17,8 @@ export interface Env {
   ACTOR_THUMBS_R2_SUBFOLDER: string;
   // MOVIE_STREAMS_R2_PREFIX?: string; // 可选
 		
-		STATIC_FILES_BUCKET: R2Bucket; // 仍然需要为生产环境声明
-  IS_LOCAL_DEV?: string; // 可选的本地开发标志
+  STATIC_FILES_BUCKET: R2Bucket; // 仍然需要为生产环境声明
+
 }
 
 // 根据你的数据库结构定义类型
