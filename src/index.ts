@@ -8,12 +8,12 @@ import { requireLogin, generateJwt, getClientIp } from './auth';
 import { serveLoginPage, serveMainSpaPage, serveMangaSpaPage, serveVideoDetailPage } from './htmlHandler';
 import { serveFileFromR2 } from './r2Utils';
 import { movieApiApp } from './movieApi'; // Assuming movieApi.ts exports a Hono app
-import { mangaApiApp }sfrom './mangaApi'; // Assuming mangaApi.ts exports a Hono app
+import { mangaApiApp } from './mangaApi'; // Assuming mangaApi.ts exports a Hono app
 
 const app = new Hono<{ Bindings: Env }>();
 
 // --- Middleware ---
-app.use('*', cors({
+app。use('*', cors({
   origin: '*', // Adjust for production
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
@@ -21,7 +21,7 @@ app.use('*', cors({
 }));
 
 // Simple activity logger (replace with a more robust solution if needed)
-app.use('*', async (c, next) => {
+app。use('*', async (c, next) => {
   const start = Date.now();
   await next();
   const ms = Date.now() - start;
