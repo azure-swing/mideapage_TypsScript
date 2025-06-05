@@ -35,6 +35,12 @@ bucket_name = "movies"    # R2 存储桶的实际名称
 [vars]
 LOGIN_CODE = "114514"
 
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = false
+
+
+
 
 # === R2 路径前缀 ===
 # 这些前缀是你的 R2 桶内部的目录结构，用于 TypeScript 代码构建完整的对象键
