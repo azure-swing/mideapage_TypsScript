@@ -40,8 +40,13 @@ bucket_name = "static"    # R2 存储桶的实际名称
 LOGIN_CODE = "114514"
 
 # wrangler.toml (wrangler v3.88.0^)
+
 [observability.logs]
-enabled = false
+enabled = true
+
+
+
+
 
 
 
