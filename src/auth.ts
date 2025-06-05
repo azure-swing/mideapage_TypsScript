@@ -12,12 +12,18 @@ interface JwtPayload {
 }
 
 export async function generateJwt(c: Context<{ Bindings: Env }>) {
+  console.log('SESSION_SECRET_KEY type:', typeof c.env.SESSION_SECRET_KEY);
+  console.log('SESSION_SECRET_KEY value (first few chars, if string):', typeof c.env.SESSION_SECRET_KEY === 'string' ? c.env.SESSION_SECRET_KEY.substring(0, 5) + '...' : c.env.SESSION_SECRET_KEY);
+
+  if (typeof c.env.SESSION_SECRET_KEY !== 'string' || c.env.SESSION_SECRET_KEY.length === 0) {
+    console.error("FATAL: SESSION_SECRET_KEY is not set or is not a non-empty string!");
+    // 在这种情况下，应该抛出一个更明确的错误，而不是让 sign 函数失败
+    throw new Error("Server configuration error: Session secret is missing.");
+  }
+
   const payload: JwtPayload = { loggedIn: true };
-  // Optional: Add expiration (e.g., 7 days)
-  // payload.exp = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
   const token = await sign(payload, c.env.SESSION_SECRET_KEY);
   return token;
-}
 
 export async function verifyJwt(c: Context<{ Bindings: Env }>, token: string): Promise<JwtPayload | null> {
   try {
