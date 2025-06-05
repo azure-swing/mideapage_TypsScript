@@ -25,7 +25,7 @@ import { mangaApiApp } from './mangaApi';
 const app = new Hono<{ Bindings: Env }>();
 
 // --- Middleware ---
-app。use('*', cors({
+app.use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -33,7 +33,7 @@ app。use('*', cors({
   maxAge: 86400,
 }));
 
-app。use('*', async (c, next) => {
+app.use('*', async (c, next) => {
   const start = Date.now();
   await next();
   const ms = Date.now() - start;
@@ -178,13 +178,13 @@ app.onError((err: any, c) => { // err as any for broader capture, then type chec
     errorStatus = err.status;
   } else if (err instanceof Error) { // 通用 Error 检查
     errorMessage = err.message;
-    // 对于通用 Error，除非它有 status 属性，否则保持 500
+    // 对于通用 Error,除非它有 status 属性,否则保持 500
     if (err && typeof (err as any).status === 'number') {
         errorStatus = (err as any).status;
     }
   } else if (typeof err === 'string') {
     errorMessage = err;
-  } else if (err && typeof err.message === 'string') { // 处理普通对象错误，如果它们有 message 和 status
+  } else if (err && typeof err.message === 'string') { // 处理普通对象错误,如果它们有 message 和 status
     errorMessage = err.message;
     if (typeof err.status === 'number') {
       errorStatus = err.status;
