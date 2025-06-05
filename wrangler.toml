@@ -27,10 +27,7 @@ bucket_name = "movies"
 binding = "STATIC_FILES_BUCKET"
 bucket_name = "static"
 
-# 如果使用电影流媒体功能:
-[[r2_buckets]]
-binding = "STREAMS_BUCKET"
-bucket_name = "your-movie-streams-r2-bucket" # !!! 替换为你的实际流媒体存储桶名称 !!!
+
 
 # --- 环境变量 / 密钥 ---
 [vars]
