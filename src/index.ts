@@ -25,7 +25,7 @@ import { mangaApiApp } from './mangaApi';
 const app = new Hono<{ Bindings: Env }>();
 
 // --- Middleware ---
-app。use('*', cors({
+app.use('*'， cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -33,7 +33,7 @@ app。use('*', cors({
   maxAge: 86400,
 }));
 
-app。use('*', async (c, next) => {
+app.use('*'， async (c, next) => {
   const start = Date.now();
   await next();
   const ms = Date.now() - start;
