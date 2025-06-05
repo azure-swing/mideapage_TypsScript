@@ -264,8 +264,6 @@ movieApiApp.get('/genres', async (c) => {
     let query = "SELECT DISTINCT genres FROM movies";
     const params: string[] = [];
     if (parentId) {
-        query += " WHERE root_folder = ?";
-        params.push(parentId);
     }
     // CORRECTED: Use DB_MOVIES
     const { results } = await c.env.DB_MOVIES.prepare(query).bind(...params).all<{genres: string}>();
@@ -305,8 +303,7 @@ movieApiApp.get('/persons', async (c) => {
     const params: string[] = [];
 
     if (parentId) {
-        conditions.push("root_folder = ?");
-        params.push(parentId);
+
     }
     if (conditions.length > 0) {
         movieQuery += " WHERE " + conditions.join(" AND ");
@@ -366,8 +363,7 @@ movieApiApp.get('/studios', async (c) => {
     const params: string[] = [];
 
     if (parentId) {
-        query += " AND root_folder = ?";
-        params.push(parentId);
+
     }
     // CORRECTED: Use DB_MOVIES
     const { results } = await c.env.DB_MOVIES.prepare(query).bind(...params).all<{studio: string}>();
@@ -388,8 +384,7 @@ movieApiApp.get('/series', async (c) => {
     let query = "SELECT id, set_name, genres, premiered, poster_file_path, fanart_file_path, root_folder FROM movies WHERE set_name IS NOT NULL AND set_name != ''";
     const params: string[] = [];
     if (parentId) {
-        query += " AND root_folder = ?";
-        params.push(parentId);
+
     }
     query += " ORDER BY premiered DESC";
     // CORRECTED: Use DB_MOVIES
