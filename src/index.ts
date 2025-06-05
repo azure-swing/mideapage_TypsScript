@@ -1,5 +1,6 @@
 // src/index.ts
-import { Hono, HTTPError } from 'hono'; // MODIFIED: Import HTTPError directly
+import { Hono } from 'hono';                // Hono 主模块
+import { HTTPException } from 'hono/http-exception'; // 新的导入方式 for HTTPError
 import { cors } from 'hono/cors';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 
@@ -24,7 +25,7 @@ import { mangaApiApp } from './mangaApi';
 const app = new Hono<{ Bindings: Env }>();
 
 // --- Middleware ---
-app.use('*', cors({
+app。use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -32,7 +33,7 @@ app.use('*', cors({
   maxAge: 86400,
 }));
 
-app.use('*', async (c, next) => {
+app。use('*', async (c, next) => {
   const start = Date.now();
   await next();
   const ms = Date.now() - start;
