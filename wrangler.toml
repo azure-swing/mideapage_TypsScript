@@ -1,4 +1,4 @@
-name = "mideapage_TypsScript" # 给你的 Worker 起一个独一无二的名字
+name = "mideapage-ts" # 给你的 Worker 起一个独一无二的名字
 main = "src/index.ts"           # Worker 的入口脚本 (见第3步)
 compatibility_date = "2025-06-04" # 使用一个较新的日期
 account_id = "1e1f534910c36b2304b1e4fdca78a03b"
