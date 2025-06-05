@@ -29,6 +29,10 @@ bucket_name = "manga"
 [[r2_buckets]]
 binding = "MOVIES_BUCKET" # 在 Worker 代码中访问的绑定名称
 bucket_name = "movies"    # R2 存储桶的实际名称
+
+[[r2_buckets]]
+binding = "STATIC_FILES_BUCKET" # 在 Worker 代码中访问的绑定名称
+bucket_name = "static"    # R2 存储桶的实际名称
 # --- 环境变量 / 密钥 ---
 # 对于非敏感变量，可以在这里定义:
 
