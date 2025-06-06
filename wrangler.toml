@@ -36,8 +36,8 @@ IS_LOCAL_DEV = "false" # 生产环境设置为 "false", 本地开发在 .dev.var
 SESSION_SECRET_KEY = "15213215sajdhadjhasdadas5d6a1d2s"
 # R2 路径前缀 (这些必须与你在 R2 中的文件组织方式匹配)
 MANGA_R2_BASE_PREFIX = "manga/manga"
-MOVIE_ASSETS_R2_BASE_PREFIX = "movies/movies"
-ACTOR_THUMBS_R2_SUBFOLDER = "actors_photo/演员图片/文件夹下/"
+MOVIE_ASSETS_R2_BASE_PREFIX = "movies/"
+ACTOR_THUMBS_R2_SUBFOLDER = "actors_photo/演员图片/"
 
 # 如果使用电影流媒体功能:
 MOVIE_STREAMS_R2_PREFIX = "path/to/video/files/prefix" # !!! 替换: STREAMS_BUCKET 中视频文件的前缀 (例如 "streams" 或空) !!!
