@@ -29,7 +29,6 @@ movieApiApp.get('/items', async (c) => {
 
   const { clause, params: whereParams } = buildMovieWhereClauseAndParams(argsDict);
 
-  // CORRECTED: Use DB_MOVIES
   const countQuery = c.env.DB_MOVIES.prepare(`SELECT COUNT(id) as total FROM movies WHERE ${clause}`);
   const dataQuery = c.env.DB_MOVIES.prepare(`SELECT * FROM movies WHERE ${clause} ORDER BY ${dbSortBy} ${dbSortOrder} NULLS LAST LIMIT ? OFFSET ?`);
 
@@ -39,7 +38,6 @@ movieApiApp.get('/items', async (c) => {
 
     const itemsRaw = await dataQuery.bind(...whereParams, limit, startIndex).all();
     
-    // CORRECTED: Pass DB_MOVIES to movieRowToDict
     const itemsListPromises = (itemsRaw.results || []).map(row => movieRowToDict(c, row, c.env.DB_MOVIES));
     const itemsList = (await Promise.all(itemsListPromises)).filter(item => item !== null);
 
@@ -61,7 +59,6 @@ movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
   const itemIdOrNum = c.req.param('item_id_or_num');
   let movieRaw: any;
 
-  // CORRECTED: Use DB_MOVIES
   if (!isNaN(parseInt(itemIdOrNum, 10))) {
     movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
   } else {
@@ -71,13 +68,12 @@ movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
   if (!movieRaw) {
     return c.json({ error: "Movie not found" }, 404);
   }
-  // CORRECTED: Pass DB_MOVIES to movieRowToDict
   const movieDict = await movieRowToDict(c, movieRaw, c.env.DB_MOVIES);
   return c.json(movieDict);
 });
 
 
-// POST /api_movies/items/:item_id_or_num/like  (Path is actually /items/:item_id_or_num, method is POST)
+// POST /api_movies/items/:item_id_or_num/like
 movieApiApp.post('/items/:item_id_or_num{.+}', async (c) => {
     const itemIdOrNum = c.req.param('item_id_or_num');
     const clientIp = getClientIp(c);
@@ -85,7 +81,6 @@ movieApiApp.post('/items/:item_id_or_num{.+}', async (c) => {
     let movieTitle: string | null = null;
 
     let row: { id: number, title: string } | null = null;
-    // CORRECTED: Use DB_MOVIES
     if (!isNaN(parseInt(itemIdOrNum, 10))) {
         row = await c.env.DB_MOVIES.prepare("SELECT id, title FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
     } else {
@@ -102,7 +97,6 @@ movieApiApp.post('/items/:item_id_or_num{.+}', async (c) => {
     }
 
     try {
-        // CORRECTED: Use DB_MOVIES
         await c.env.DB_MOVIES.prepare("UPDATE movies SET is_liked = 1 WHERE id = ?").bind(movieId).run();
         console.info(`${clientIp} - Liked movie: '${movieTitle}' (ID/Num: ${itemIdOrNum})`); 
         return c.json({ message: "Movie liked", is_liked: true });
@@ -112,7 +106,7 @@ movieApiApp.post('/items/:item_id_or_num{.+}', async (c) => {
     }
 });
 
-// DELETE /api_movies/items/:item_id_or_num/like (Path is actually /items/:item_id_or_num, method is DELETE)
+// DELETE /api_movies/items/:item_id_or_num/like
 movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
     const itemIdOrNum = c.req.param('item_id_or_num');
     const clientIp = getClientIp(c);
@@ -120,7 +114,6 @@ movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
     let movieTitle: string | null = null;
     
     let row: { id: number, title: string } | null = null;
-    // CORRECTED: Use DB_MOVIES
     if (!isNaN(parseInt(itemIdOrNum, 10))) {
         row = await c.env.DB_MOVIES.prepare("SELECT id, title FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
     } else {
@@ -136,7 +129,6 @@ movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
         return c.json({ error: "Movie not found" }, 404);
     }
     try {
-        // CORRECTED: Use DB_MOVIES
         await c.env.DB_MOVIES.prepare("UPDATE movies SET is_liked = 0 WHERE id = ?").bind(movieId).run();
         console.info(`${clientIp} - Unliked movie: '${movieTitle}' (ID/Num: ${itemIdOrNum})`);
         return c.json({ message: "Movie unliked", is_liked: false });
@@ -147,55 +139,75 @@ movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
 });
 
 
+// --- MODIFIED START: POSTER IMAGE LOGIC ---
 // GET /api_movies/images/poster/:movie_id_or_num
 movieApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
   const movieIdOrNum = c.req.param('movie_id_or_num');
-  let dbRow: { poster_file_path: string } | null = null;
+  
+  // 1. 定义 dbRow 类型，包含两个路径字段
+  let dbRow: { folder_path_relative: string, poster_file_relative_path: string } | null = null;
+  
+  // 2. 修改 SQL 查询，获取两个路径字段
+  const query = "SELECT folder_path_relative, poster_file_relative_path FROM movies WHERE";
 
-  // CORRECTED: Use DB_MOVIES
   if (!isNaN(parseInt(movieIdOrNum, 10))) {
-    dbRow = await c.env.DB_MOVIES.prepare("SELECT poster_file_path FROM movies WHERE id = ?").bind(parseInt(movieIdOrNum, 10)).first();
+    dbRow = await c.env.DB_MOVIES.prepare(`${query} id = ?`).bind(parseInt(movieIdOrNum, 10)).first();
   } else {
-    dbRow = await c.env.DB_MOVIES.prepare("SELECT poster_file_path FROM movies WHERE uniqueid_num = ?").bind(movieIdOrNum).first();
+    dbRow = await c.env.DB_MOVIES.prepare(`${query} uniqueid_num = ?`).bind(movieIdOrNum).first();
   }
 
-  if (dbRow && dbRow.poster_file_path) {
-    // CORRECTED: Use MOVIE_ASSETS_R2_BASE_PREFIX and MOVIES_ASSETS_BUCKET
-    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${dbRow.poster_file_path}`.replace(/\/\//g, '/');
+  // 3. 检查新字段并拼接它们以构建 R2 Key
+  if (dbRow && dbRow.folder_path_relative && dbRow.poster_file_relative_path) {
+    const fullRelativePath = `${dbRow.folder_path_relative}/${dbRow.poster_file_relative_path}`;
+    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${fullRelativePath}`.replace(/\/\//g, '/');
     return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
   }
+
   return c.text("Poster not found", 404);
 });
+// --- MODIFIED END: POSTER IMAGE LOGIC ---
 
+
+// --- MODIFIED START: FANART IMAGE LOGIC ---
 // GET /api_movies/images/fanart/:movie_id_or_num
 movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
   const movieIdOrNum = c.req.param('movie_id_or_num');
-  let dbRow: { fanart_file_path: string } | null = null;
-  // CORRECTED: Use DB_MOVIES
+  
+  // 1. 定义 dbRow 类型，包含两个路径字段
+  // 假设 fanart 的字段名为 fanart_file_relative_path，请根据您的数据库进行调整
+  let dbRow: { folder_path_relative: string, fanart_file_relative_path: string } | null = null;
+  
+  // 2. 修改 SQL 查询，获取两个路径字段
+  const query = "SELECT folder_path_relative, fanart_file_relative_path FROM movies WHERE";
+
   if (!isNaN(parseInt(movieIdOrNum, 10))) {
-    dbRow = await c.env.DB_MOVIES.prepare("SELECT fanart_file_path FROM movies WHERE id = ?").bind(parseInt(movieIdOrNum,10)).first();
+    dbRow = await c.env.DB_MOVIES.prepare(`${query} id = ?`).bind(parseInt(movieIdOrNum,10)).first();
   } else {
-    dbRow = await c.env.DB_MOVIES.prepare("SELECT fanart_file_path FROM movies WHERE uniqueid_num = ?").bind(movieIdOrNum).first();
+    dbRow = await c.env.DB_MOVIES.prepare(`${query} uniqueid_num = ?`).bind(movieIdOrNum).first();
   }
 
-  if (dbRow && dbRow.fanart_file_path) {
-    // CORRECTED: Use MOVIE_ASSETS_R2_BASE_PREFIX and MOVIES_ASSETS_BUCKET
-    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${dbRow.fanart_file_path}`.replace(/\/\//g, '/');
+  // 3. 检查新字段并拼接它们以构建 R2 Key
+  if (dbRow && dbRow.folder_path_relative && dbRow.fanart_file_relative_path) {
+    const fullRelativePath = `${dbRow.folder_path_relative}/${dbRow.fanart_file_relative_path}`;
+    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${fullRelativePath}`.replace(/\/\//g, '/');
     return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
   }
+
   return c.text("Fanart not found", 404);
 });
+// --- MODIFIED END: FANART IMAGE LOGIC ---
+
 
 // GET /api_movies/images/actor_thumb/:actor_name
+// 注意: 此部分未修改，因为它从 actors_info 表获取数据，可能使用不同的路径结构。
+// 如果也需要修改，请参照上面的模式进行。
 movieApiApp.get('/images/actor_thumb/:actor_name{.+}', async (c) => {
     const actorName = c.req.param('actor_name');
-    // CORRECTED: Use DB_MOVIES
     const dbRow: { thumb_path: string } | null = await c.env.DB_MOVIES.prepare("SELECT thumb_path FROM actors_info WHERE name = ?")
         .bind(actorName)
         .first();
 
     if (dbRow && dbRow.thumb_path) {
-        // CORRECTED: Use MOVIE_ASSETS_R2_BASE_PREFIX, ACTOR_THUMBS_R2_SUBFOLDER and MOVIES_ASSETS_BUCKET
         const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${c.env.ACTOR_THUMBS_R2_SUBFOLDER}/${dbRow.thumb_path}`.replace(/\/\//g, '/');
         return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
     }
@@ -208,7 +220,6 @@ movieApiApp.get('/stream/:item_id_or_num{.+}', async (c) => {
     const clientIp = getClientIp(c);
     let movieRaw: { id: number, title: string, strm_files: string } | null = null;
 
-    // CORRECTED: Use DB_MOVIES
     if (!isNaN(parseInt(itemIdOrNum, 10))) {
         movieRaw = await c.env.DB_MOVIES.prepare("SELECT id, title, strm_files FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
     } else {
@@ -242,14 +253,9 @@ movieApiApp.get('/stream/:item_id_or_num{.+}', async (c) => {
          return c.json({ error: "Valid R2 key for video file not found in strm_files" }, 404);
     }
     
-    // CORRECTED: Use MOVIE_ASSETS_R2_BASE_PREFIX (assuming streams are under the same base prefix)
-    // If strm_files.url is already the full path within the bucket (e.g. "movies/movies/some/video.mp4"),
-    // then MOVIE_ASSETS_R2_BASE_PREFIX might not be needed here, or strm_files.url needs to be relative.
-    // Assuming strm_files.url is relative to MOVIE_ASSETS_R2_BASE_PREFIX for now.
     const fullR2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${streamR2Key}`.replace(/\/\//g, '/');
     
     console.info(`${clientIp} - Started playing movie: '${movieRaw.title}' (ID/Num: ${itemIdOrNum}) from R2 key: ${fullR2Key}`);
-    // CORRECTED: Use MOVIES_ASSETS_BUCKET for streams
     if (!c.env.MOVIES_ASSETS_BUCKET) {
         console.error("[R2] MOVIES_ASSETS_BUCKET for streams is not bound.");
         return c.text("Stream service misconfiguration", 500);
@@ -265,7 +271,6 @@ movieApiApp.get('/genres', async (c) => {
     const params: string[] = [];
     if (parentId) {
     }
-    // CORRECTED: Use DB_MOVIES
     const { results } = await c.env.DB_MOVIES.prepare(query).bind(...params).all<{genres: string}>();
     const allGenreNames = new Set<string>();
     (results || []).forEach(row => {
@@ -278,7 +283,6 @@ movieApiApp.get('/genres', async (c) => {
 
 // GET /api_movies/libraries
 movieApiApp.get('/libraries', async (c) => {
-    // CORRECTED: Use DB_MOVIES
     const { results } = await c.env.DB_MOVIES.prepare(
         "SELECT DISTINCT root_folder FROM movies WHERE root_folder IS NOT NULL AND root_folder != ''"
     ).all<{root_folder: string}>();
@@ -291,12 +295,12 @@ movieApiApp.get('/libraries', async (c) => {
     return c.json(libs);
 });
 
-// GET /api_movies/persons (Actors, Directors)
+// GET /api_movies/persons
 movieApiApp.get('/persons', async (c) => {
     const personType = c.req.query('PersonType') || 'Actor'; 
     const parentId = c.req.query('ParentId'); 
 
-    const personsMap: Record<string, any> = {}; // Using 'any' for PersonInfo structure from JS
+    const personsMap: Record<string, any> = {};
 
     let movieQuery = "SELECT id, actors, director, root_folder FROM movies";
     const conditions: string[] = [];
@@ -308,13 +312,11 @@ movieApiApp.get('/persons', async (c) => {
     if (conditions.length > 0) {
         movieQuery += " WHERE " + conditions.join(" AND ");
     }
-    // CORRECTED: Use DB_MOVIES
     const movieRowsResult = await c.env.DB_MOVIES.prepare(movieQuery).bind(...params).all<Movie>();
     const movieRows = movieRowsResult.results || [];
 
     const actorThumbs: Record<string, string> = {};
     if (personType.toLowerCase() === 'actor') {
-        // CORRECTED: Use DB_MOVIES
         const thumbRowsResult = await c.env.DB_MOVIES.prepare(
             "SELECT name, thumb_path FROM actors_info WHERE thumb_path IS NOT NULL AND thumb_path != ''"
         ).all<ActorInfoDb>();
@@ -358,14 +360,13 @@ movieApiApp.get('/persons', async (c) => {
 // GET /api_movies/studios
 movieApiApp.get('/studios', async (c) => {
     const parentId = c.req.query('ParentId');
-    const studiosMap: Record<string, any> = {}; // Using 'any' for StudioInfo from JS
+    const studiosMap: Record<string, any> = {};
     let query = "SELECT studio FROM movies WHERE studio IS NOT NULL AND studio != ''";
     const params: string[] = [];
 
     if (parentId) {
 
     }
-    // CORRECTED: Use DB_MOVIES
     const { results } = await c.env.DB_MOVIES.prepare(query).bind(...params).all<{studio: string}>();
     (results || []).forEach(row => {
         const name = row.studio;
@@ -381,13 +382,15 @@ movieApiApp.get('/series', async (c) => {
     const parentId = c.req.query('ParentId');
     const seriesMap: Record<string, any> = {};
 
-    let query = "SELECT id, set_name, genres, premiered, poster_file_path, fanart_file_path, root_folder FROM movies WHERE set_name IS NOT NULL AND set_name != ''";
+    let query = "SELECT id, set_name, genres, premiered, root_folder FROM movies WHERE set_name IS NOT NULL AND set_name != ''";
     const params: string[] = [];
     if (parentId) {
 
     }
     query += " ORDER BY premiered DESC";
-    // CORRECTED: Use DB_MOVIES
+    // NOTE: The original code had poster_file_path and fanart_file_path here. 
+    // Since these are no longer single fields, I've removed them from this SELECT.
+    // The image URLs are constructed with the movie ID, which is correct and does not need to change.
     const movieRowsResult = await c.env.DB_MOVIES.prepare(query).bind(...params).all<Movie>();
     const movieRows = movieRowsResult.results || [];
 
@@ -404,10 +407,12 @@ movieApiApp.get('/series', async (c) => {
         const movieGenres = parseJsonField<string>(movie.genres);
         movieGenres.forEach(g => seriesMap[name].Genres.add(g));
 
-        if (!seriesMap[name].PrimaryImageTag && movie.poster_file_path && movie.id) {
+        // This logic remains correct. It builds a URL pointing to our API endpoint.
+        // The API endpoint itself now knows how to resolve this ID into the correct file path.
+        if (!seriesMap[name].PrimaryImageTag && movie.id) {
             seriesMap[name].PrimaryImageTag = `${c.req.url.origin}/api_movies/images/poster/${movie.id}`;
         }
-        if (movie.fanart_file_path && seriesMap[name].BackdropImageTags.length < 3 && movie.id) {
+        if (seriesMap[name].BackdropImageTags.length < 3 && movie.id) {
             seriesMap[name].BackdropImageTags.push(`${c.req.url.origin}/api_movies/images/fanart/${movie.id}`);
         }
     });
@@ -429,7 +434,6 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
     const MAX_GENRE_CANDIDATES = 10;
 
     let sourceMovieRow: { id: number } | null = null;
-    // CORRECTED: Use DB_MOVIES
     if (!isNaN(parseInt(itemIdOrNum, 10))) {
         sourceMovieRow = await c.env.DB_MOVIES.prepare("SELECT id FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
     } else {
@@ -440,7 +444,6 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
     if (!sourceMovieId) {
         return c.json({ error: "Source movie not found" }, 404);
     }
-    // CORRECTED: Use DB_MOVIES
     const primaryRelatedResult = await c.env.DB_MOVIES.prepare(`
         SELECT m.*
         FROM precomputed_related_movies prm
@@ -450,7 +453,6 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
         LIMIT ?
     `).bind(sourceMovieId, MAX_PRIMARY_RELATED).all<Movie>();
     
-    // CORRECTED: Pass DB_MOVIES to movieRowToDict
     const primaryRelatedPromises = (primaryRelatedResult.results || []).map(row => movieRowToDict(c, row, c.env.DB_MOVIES));
     const primaryRelatedList = (await Promise.all(primaryRelatedPromises)).filter(Boolean) as Movie[];
 
@@ -458,7 +460,6 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
     let genreRandomRelatedList: Movie[] = [];
 
     if (NUM_RANDOM_GENRE_PICKS > 0) {
-        // CORRECTED: Use DB_MOVIES
         const genreCandidatesResult = await c.env.DB_MOVIES.prepare(`
             SELECT m.*
             FROM precomputed_related_movies prm
@@ -468,7 +469,6 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
             LIMIT ?
         `).bind(sourceMovieId, MAX_GENRE_CANDIDATES).all<Movie>();
         
-        // CORRECTED: Pass DB_MOVIES to movieRowToDict
         const genreCandidatePromises = (genreCandidatesResult.results || []).map(row => movieRowToDict(c, row, c.env.DB_MOVIES));
         const genreCandidatesList = (await Promise.all(genreCandidatePromises)).filter(Boolean) as Movie[];
 
@@ -485,10 +485,9 @@ movieApiApp.get('/items/:item_id_or_num/precomputed_related', async (c) => {
 
 // GET /api_movies/movie_collections
 movieApiApp.get('/movie_collections', async (c) => {
-    // CORRECTED: Use DB_MOVIES
     const { results } = await c.env.DB_MOVIES.prepare(
         "SELECT id, name FROM movie_collections ORDER BY name ASC"
-    ).all<{id: number, name: string }>(); // Assuming CollectionInfo structure
+    ).all<{id: number, name: string }>(); 
     return c.json(results || []);
 });
 
@@ -502,7 +501,6 @@ movieApiApp.post('/movie_collections', async (c) => {
         return c.json({ error: "Name required" }, 400);
     }
     try {
-        // CORRECTED: Use DB_MOVIES
         const result = await c.env.DB_MOVIES.prepare("INSERT INTO movie_collections (name) VALUES (?) RETURNING id")
             .bind(collectionName)
             .first<{id: number}>(); 
