@@ -1,9 +1,9 @@
-<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - 暗黑次元</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;700&display=swap');
         
@@ -57,18 +57,12 @@
         .login-container {
             position: relative;
             z-index: 10;
-            /* 
-              >>> ADJUST MAIN BOX BACKGROUND TRANSPARENCY HERE <<<
-              The last value in rgba() (e.g., 0.70 below) controls this.
-              Example: rgba(10, 10, 30, 0.60) for more transparency.
-                       rgba(10, 10, 30, 0.85) for less transparency.
-            */
             background: rgba(10, 10, 30, 0.5); 
             backdrop-filter: blur(18px) saturate(160%);
             border: 2px solid transparent;
             border-radius: 20px;
             padding: 50px 40px;
-            width: 380px; /* Login box width */
+            width: 380px;
             text-align: center;
             box-shadow: 
                 0 0 60px rgba(0, 255, 255, 0.35),
@@ -85,16 +79,6 @@
             content: '';
             position: absolute;
             top: -2px; left: -2px; right: -2px; bottom: -2px;
-            /* 
-              >>> ADJUST ANIMATED BORDER TRANSPARENCY HERE <<<
-              Change #hex colors to rgba(R, G, B, ALPHA) if you want the border itself to be transparent.
-              Example (for a 50% transparent border): 
-                background: linear-gradient(45deg, 
-                                            rgba(0,255,255,0.5), 
-                                            rgba(179,157,219,0.5), 
-                                            rgba(0,255,255,0.5)
-                                           );
-            */
             background: linear-gradient(45deg, #00ffff, #B39DDB, #00ffff);
             background-size: 400% 400%;
             border-radius: 20px;
@@ -244,15 +228,19 @@
             100% { opacity: 0.9; filter: blur(0px); }
         }
         
+        .error-message-container { /* New container for error message */
+            margin-top: 25px;
+        }
+
         .error-message {
             background: rgba(255, 0, 100, 0.15);
             border: 1px solid rgba(255, 0, 100, 0.5);
             color: #ff8fab;
             padding: 12px 15px;
             border-radius: 8px;
-            margin-top: 25px;
             font-size: 0.9em;
             animation: errorPulse 0.7s ease-out;
+            display: none; /* Initially hidden */
         }
         
         @keyframes errorPulse {
@@ -281,7 +269,7 @@
         
         <div class="deco-line"></div>
         
-        <form method="POST" action="{{ url_for('login_submit_route') }}" id="loginForm">
+        <form method="POST" action="/login" id="loginForm"> {/* MODIFIED action */}
             <div class="form-group">
                 <label for="login_code">登录授权码:</label>
                 <div class="input-container">
@@ -294,14 +282,21 @@
             </button>
         </form>
         
-        {% if error %}
-            <div class="deco-line" style="margin-top: 30px; margin-bottom: 0;"></div>
-            <p class="error-message">{{ error }}</p>
-        {% endif %}
+        <div class="error-message-container" id="errorMessageContainer"> {/* MODIFIED for JS targeting */}
+             {/* Removed Jinja2 if/else block. Error message will be injected here by JS */}
+        </div>
     </div>
     
     <script>
-        const backgroundImages = {{ background_images | tojson }};
+        // MODIFIED: Hardcoded background images. Update paths as needed.
+        // These paths assume your Hono server serves files from a "static" directory at the root.
+        // e.g., "/static/backdrop/ComfyUI_00133_.png"
+        const backgroundImages = [
+            '/static/backdrop/ComfyUI_00133_.png', // Your provided image
+            // Add more image paths here if you have them, e.g.:
+            // '/static/backdrop/another_image.jpg',
+            // '/static/backdrop/yet_another_one.png'
+        ];
         let currentImageIndex = 0;
         const bodyElement = document.body;
 
@@ -316,11 +311,12 @@
             }
         }
 
-        if (backgroundImages && backgroundImages.length > 0) {
+        if (backgroundImages && backgroundImages.length > 0 && backgroundImages[0]) { // Check if first image exists
             currentImageIndex = Math.floor(Math.random() * backgroundImages.length);
             setBackground(backgroundImages[currentImageIndex]);
             setInterval(changeBackground, 7000);
         } else {
+            // Fallback solid background if no images are defined or the first is empty
             bodyElement.style.background = `#0f121a linear-gradient(to bottom, rgba(10,10,20,0.5), rgba(0,0,0,0.9))`;
             bodyElement.style.backgroundSize = 'cover';
             bodyElement.style.backgroundPosition = 'center center';
@@ -383,6 +379,27 @@
         
         document.addEventListener('DOMContentLoaded', function() {
             createParticles();
+
+            // MODIFIED: Display error message from URL query parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorParam = urlParams.get('error');
+            const errorMessageContainer = document.getElementById('errorMessageContainer');
+
+            if (errorParam && errorMessageContainer) {
+                // Create the deco-line and error message elements dynamically
+                const decoLine = document.createElement('div');
+                decoLine.className = 'deco-line';
+                decoLine.style.marginTop = '30px';
+                decoLine.style.marginBottom = '0';
+
+                const errorMessageP = document.createElement('p');
+                errorMessageP.className = 'error-message';
+                errorMessageP.textContent = decodeURIComponent(errorParam); // Decode URI component
+                errorMessageP.style.display = 'block'; // Make it visible
+
+                errorMessageContainer.appendChild(decoLine);
+                errorMessageContainer.appendChild(errorMessageP);
+            }
         });
     </script>
 </body>

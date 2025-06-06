@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -120,32 +119,7 @@
       outline: none;
       box-shadow: 0 0 5px var(--accent-color);
     }
-    /* 媒体库过滤区域（支持多选，读取 Emby 媒体库数据） */
-    .library-filters {
-      background-color: var(--card-bg);
-      padding: 10px 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
-    .library-filter {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      cursor: pointer;
-      user-select: none;
-      padding: 5px 10px;
-      background-color: var(--nav-bg);
-      border-radius: var(--border-radius);
-      transition: background-color var(--transition-speed);
-    }
-    .library-filter.active {
-      background-color: var(--accent-color);
-    }
-    .library-filter input {
-      margin-right: 5px;
-    }
+
     /* 悬浮的标签下拉按钮 - 定位在屏幕高度的 1/3 */
     .tag-dropdown {
       position: fixed;
@@ -942,16 +916,7 @@
     }
 
 
-    /* Library Filters */
-    .library-filters {
-        padding: 10px 15px;
-        gap: 8px;
-        justify-content: center;
-    }
-    .library-filter {
-        padding: 4px 8px;
-        font-size: 0.9em;
-    }
+
 
     /* Tag Dropdown */
     .tag-dropdown {
@@ -1219,9 +1184,9 @@
   <nav class="navbar">
     <div class="navbar-left-section"> 
       <a href="#" class="navbar-brand" onclick="resetAndShowHome(); return false;">FBIwarning</a>
-
-      <a href="{{ url_for('logout_route') }}" class="logout-button-small" title="退出登录">🚪</a>
-
+      <!-- MODIFIED HERE -->
+      <a href="/logout" class="logout-button-small" title="退出登录">🚪</a>
+      <!-- END MODIFICATION -->
     </div>
 
     <ul class="navbar-nav"> <!-- 中间导航项保持不变 -->
@@ -1229,15 +1194,14 @@
       <li><a href="#" onclick="filterMovieType('Movie'); return false;">电影</a></li>
       <li><a href="#" onclick="filterMovieType('Series'); return false;">剧集</a></li>
 	  <li><a href="#" onclick="navigateToMangaHome(); return false;">漫画</a></li>
-    </ul
+    </ul>
     <div class="search-box">
       <input type="text" class="search-input" id="searchInput" placeholder="搜索影片、演员、系列...">
 						<button class="search-mode-button" id="searchByIdBtn" title="切换到番号搜索模式">🆔</button> 
     </div>
   </nav>
 
-  <!-- 媒体库过滤区域 -->
-  <div class="library-filters" id="libraryFilters">
+
     <!-- 过滤项由JS加载 -->
   </div>
 
@@ -1355,8 +1319,8 @@
 // ====================================================================================
 
 // --- 全局API配置 ---
-const MOVIE_API_BASE_URL = '/api_movies'; // Flask后端电影API (相对路径)
-// const MANGA_API_BASE_URL = '/api'; // Flask后端漫画API (如果需要)
+const MOVIE_API_BASE_URL = '/api_movies'; // Hono后端电影API (相对路径)
+// const MANGA_API_BASE_URL = '/api'; // Hono后端漫画API (如果需要)
 
 // --- DOM Elements ---
 const searchInput = document.getElementById('searchInput');
@@ -1368,7 +1332,7 @@ const currentPageInput = document.getElementById('currentPageInput');
 const pageInfoSpan = document.getElementById('pageInfo');
 const tagPanel = document.getElementById('tagPanel');
 const tagBtn = document.getElementById('tagBtn');
-const libraryFiltersDiv = document.getElementById('libraryFilters');
+
 const prevPageBtn = document.getElementById('prevPage');
 const nextPageBtn = document.getElementById('nextPage');
 const homepage = document.getElementById('homepage'); 
@@ -1380,12 +1344,12 @@ const genericViewTitle = document.getElementById('genericViewTitle');
 const genericListContainer = document.getElementById('genericListContainer');
 const genericExpandListBtn = document.getElementById('genericExpandListBtn');
 const genericDetailsContainer = document.getElementById('genericDetailsContainer');
-const genericSortByCountBtn = document.getElementById('sortActorsByCount'); // Ensure this ID exists if used
-const genericSortByNameBtn = document.getElementById('sortActorsByName');   // Ensure this ID exists if used
+const genericSortByCountBtn = document.getElementById('sortActorsByCount'); 
+const genericSortByNameBtn = document.getElementById('sortActorsByName');   
 const numberViewPage = document.getElementById('numberViewPage');
 const numberPrefixListContainer = document.getElementById('numberPrefixListContainer');
 const numberResultsContainer = document.getElementById('numberResultsContainer');
-const searchByIdBtn = document.getElementById('searchByIdBtn'); // NEW
+const searchByIdBtn = document.getElementById('searchByIdBtn'); 
 
 // --- 全局状态设置 (电影库相关) ---
 let currentView = 'homepage'; 
@@ -1410,8 +1374,8 @@ let isCarouselPaused = false;
 let allFilteredWorksData = []; 
 let currentGenericViewConfig = null; 
 let allGenericData = []; 
-let genericSortBy = 'movieCount'; // Default sort for generic views
-let genericSortOrder = 'Descending';// Default order for generic views
+let genericSortBy = 'movieCount'; 
+let genericSortOrder = 'Descending';
 let isGenericListExpanded = false;
 let selectedGenericIds = new Set(); 
 let isFilteredWorksViewActive = false; 
@@ -1430,32 +1394,28 @@ const viewConfigs = {
     director: { type: 'director', title: '导演', itemField: 'People', subTypeField: 'Type', subTypeValue: 'Director', apiQueryParam: 'personIds', itemImageField: 'PrimaryImageTag', embyLinkType: 'personId', placeholderName: '导演', placeholderItemName: '作品', targetUrl: '/directors_view_page' },
     studio: { type: 'studio', title: '工作室', itemField: 'Studios', subTypeField: null, subTypeValue: null, apiQueryParam: 'studioIds', itemImageField: null, embyLinkType: 'studioId', placeholderName: '工作室', placeholderItemName: '作品', targetUrl: '/studios_view_page' }
 };
+const placeholderGridImg = '/static/placeholder_poster.png'; // Defined globally
+const placeholderMoviePosterImg = '/static/placeholder_poster.png'; // Defined globally, can be same or different
 
-// ##########################################################################
-// START OF MODIFIED SECTION: DOMContentLoaded and navigateToMangaHome
-// ##########################################################################
 window.addEventListener('DOMContentLoaded', () => {
-    const containerPaddingHorizontal = 40; // 20px left + 20px right for .container
+    const containerPaddingHorizontal = 40; 
     const gridCssPercentageWidth = 0.8;
     const estimatedGridWidth = (window.innerWidth - containerPaddingHorizontal) * gridCssPercentageWidth;
     const minCardWidthCss = 180;
     const gapCss = 20;
     const cardsPerRow = Math.max(1, Math.floor((estimatedGridWidth + gapCss) / (minCardWidthCss + gapCss)));
-    window.pageSize = getOptimizedPageSize(100, cardsPerRow);
-    console.log(`Dynamically calculated: Cards per row: ${cardsPerRow}, Optimal pageSize: ${window.pageSize}`);
-    // ---- NEW pageSize LOGIC ----
-    if (window.innerWidth <= 768) { // Mobile breakpoint consistent with CSS
-        window.pageSize = 3 * 20; // 3 columns * 20 rows = 60 items
+    
+    if (window.innerWidth <= 768) { 
+        window.pageSize = 3 * 20; 
         console.log(`Mobile: pageSize set to ${window.pageSize}`);
     } else {
-        // Original desktop calculation (or a fixed desktop pageSize)
-        const containerPaddingHorizontalDesktop = 40; // For .container
-        const gridCssPercentageWidthDesktop = 0.8;    // For .carousel-grid width: 80%
+        const containerPaddingHorizontalDesktop = 40; 
+        const gridCssPercentageWidthDesktop = 0.8;    
         const estimatedGridWidthDesktop = (window.innerWidth - containerPaddingHorizontalDesktop) * gridCssPercentageWidthDesktop;
-        const minCardWidthCssDesktop = 180;           // From grid-template-columns: minmax(180px, 1fr)
-        const gapCssDesktop = 20;                     // From .carousel-grid gap
+        const minCardWidthCssDesktop = 180;           
+        const gapCssDesktop = 20;                     
         const cardsPerRowDesktop = Math.max(1, Math.floor((estimatedGridWidthDesktop + gapCssDesktop) / (minCardWidthCssDesktop + gapCssDesktop)));
-        window.pageSize = getOptimizedPageSize(100, cardsPerRowDesktop); // Original target 100, adjust per row
+        window.pageSize = getOptimizedPageSize(100, cardsPerRowDesktop); 
         console.log(`Desktop: Cards per row: ${cardsPerRowDesktop}, Optimal pageSize: ${window.pageSize}`);
     }
     initializeMoviePageWithRouting();
@@ -1468,27 +1428,24 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // MODIFIED: Search input listener to call handleGlobalSearch
     searchInput.addEventListener('input', debounce(() => {
         currentSearchTerm = searchInput.value.trim();
-        currentPage = 1; // Reset page on new search
+        currentPage = 1; 
         handleGlobalSearch();
     }, 500));
 
-    // NEW: Unique ID search button listener
     if (searchByIdBtn) {
         searchByIdBtn.addEventListener('click', toggleUniqueIdSearchMode);
     }
 
     currentPageInput.addEventListener('change', () => {
         let pageNumber = parseInt(currentPageInput.value, 10);
-        if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber >= 1) { // Fixed condition: pageNumber >= 1
+        if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) { 
             currentPage = pageNumber;
-            // NEW: Differentiate between filtered works and fuzzy unique ID search when rendering page
             if (isFilteredWorksViewActive) {
                 renderFilteredWorksCurrentPage();
-            } else if (currentView === 'uniqueIdSearch') { // NEW
-                fetchFuzzyUniqueIdMovies(); // NEW
+            } else if (currentView === 'uniqueIdSearch') { 
+                fetchFuzzyUniqueIdMovies(); 
             } else if (currentView === 'homepage') {
                 fetchHomePageData();
             }
@@ -1509,7 +1466,6 @@ window.addEventListener('DOMContentLoaded', () => {
             const prefix = manualNumberInput.value.trim();
             if (prefix) {
                 document.querySelectorAll('#numberPrefixListContainer .actor-list-item.active').forEach(el => el.classList.remove('active'));
-                // MODIFIED: Pass global search term to number search
                 searchByNumberPrefix(prefix);
             } else {
                 numberResultsContainer.innerHTML = '<p style="text-align: center; color: var(--secondary-text); padding-top: 50px;">请输入番号前缀进行搜索。</p>';
@@ -1531,9 +1487,9 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
     function getOptimizedPageSize(target, perRow) {
-        if (perRow <= 0) return target; // Avoid division by zero or infinite loop
+        if (perRow <= 0) return target; 
         let lower = target, upper = target;
-        while (true) { // Loop indefinitely until a condition is met or bounds are exceeded
+        while (true) { 
             if (lower > 0) {
                 if (lower % perRow === 0) return lower;
             } else {
@@ -1564,7 +1520,7 @@ function navigateToMangaHome() {
 
 async function initializeMoviePageWithRouting() {
     updateSortButtonsUI();
-    await fetchLocalMovieLibraries();
+    
     await fetchLocalMovieGenres();
     
     handlePathChange(window.location.pathname, window.location.hash, history.state);
@@ -1579,9 +1535,11 @@ async function handlePathChange(path, hash, state) {
     homepage.style.display = 'none';
 
     isUniqueIdSearchMode = false;
-    searchByIdBtn.classList.remove('active');
-    searchInput.classList.remove('unique-id-mode');
-    searchInput.placeholder = '搜索影片、演员、系列...';
+    if (searchByIdBtn) searchByIdBtn.classList.remove('active');
+    if (searchInput) {
+      searchInput.classList.remove('unique-id-mode');
+      searchInput.placeholder = '搜索影片、演员、系列...';
+    }
 
 
     if (hash) {
@@ -1590,43 +1548,40 @@ async function handlePathChange(path, hash, state) {
         const studioFilter = hashParams.get('studio');
         const directorFilter = hashParams.get('director');
 		const actorFilter = hashParams.get('actor');
-        const seriesNameFilter = hashParams.get('seriesName'); // Handle seriesName from hash
+        const seriesNameFilter = hashParams.get('seriesName'); 
 
         if (genreFilter) {
             console.log("Found genre filter in hash:", genreFilter);
             await resetAndShowHome();
             selectedMovieTags = [genreFilter];
-            document.getElementById('tagBtn').click(); // Open tag panel to show selection
+            if (tagBtn) tagBtn.click(); 
             renderTagPanel();
             await fetchHomePageData();
-            history.replaceState(null, document.title, window.location.pathname); // Clear hash
+            history.replaceState(null, document.title, window.location.pathname); 
             return;
         } else if (studioFilter || directorFilter || actorFilter) {
 			const type = studioFilter ? 'studio' : (directorFilter ? 'director' : 'actor');
 			const filterValue = studioFilter || directorFilter || actorFilter;
             console.log(`Found ${type} filter in hash:`, filterValue);
-            await showGenericView(type, false); // false to not update history again
+            await showGenericView(type, false); 
             if (allGenericData.length === 0) await loadGenericData();
             const itemToSelect = allGenericData.find(item => item.name === filterValue);
             if (itemToSelect) {
                 selectedGenericIds.clear(); selectedGenericIds.add(itemToSelect.id);
                 renderGenericList(); await updateGenericDetails();
             }
-            history.replaceState(null, document.title, window.location.pathname); // Clear hash
+            history.replaceState(null, document.title, window.location.pathname); 
             return;
         } else if (seriesNameFilter) {
             console.log("Found seriesName filter in hash:", seriesNameFilter);
-            await showSeriesView(false); // false to not update history again
-            // Try to find and expand the series. loadAllSeriesData() will be called by showSeriesView.
-            // We might need to wait for allSeriesData to populate.
+            await showSeriesView(false); 
             const checkSeriesInterval = setInterval(async () => {
                 if (allSeriesData.length > 0) {
                     clearInterval(checkSeriesInterval);
                     const seriesToExpand = allSeriesData.find(s => s.name === seriesNameFilter);
                     if (seriesToExpand) {
                         console.log(`Pre-expanding series from hash: ${seriesToExpand.name}`);
-                        await toggleSeriesExpansion(seriesToExpand.id, true); // Force expand
-                         // Scroll to the expanded series
+                        await toggleSeriesExpansion(seriesToExpand.id, true); 
                         const safeSuffix = generateSafeIdSuffixForSeries(seriesToExpand);
                         const seriesElement = document.getElementById(`series-item-${safeSuffix}`);
                         if (seriesElement) {
@@ -1637,13 +1592,12 @@ async function handlePathChange(path, hash, state) {
                     }
                 }
             }, 100);
-            setTimeout(() => clearInterval(checkSeriesInterval), 5000); // Timeout for safety
-            history.replaceState(null, document.title, window.location.pathname); // Clear hash
+            setTimeout(() => clearInterval(checkSeriesInterval), 5000); 
+            history.replaceState(null, document.title, window.location.pathname); 
             return;
         }
     }
 
-    // Path based routing
     if (path === '/' || path === '/movies_home') {
         await resetAndShowHome();
     } else if (path === '/actors_view_page') {
@@ -1662,9 +1616,6 @@ async function handlePathChange(path, hash, state) {
     }
 }
 
-
-
-
 function updateURL(path, title, newHash = '') {
     const currentPath = window.location.pathname;
     const currentHash = window.location.hash;
@@ -1674,10 +1625,6 @@ function updateURL(path, title, newHash = '') {
         console.log("URL updated to:", targetFullUrl);
     }
 }
-// ##########################################################################
-// END OF MODIFIED SECTION
-// ##########################################################################
-
 
 function debounce(func, wait) {
     let timeout;
@@ -1704,31 +1651,33 @@ function resetAndShowHome() {
     selectedMovieTags = [];
     currentSearchTerm = '';
     currentContentTypeFilter = '';
-    searchInput.value = '';
+    if(searchInput) searchInput.value = '';
     currentPage = 1;
     currentSortBy = 'DateCreated';
     currentSortOrder = 'Descending';
 
     isUniqueIdSearchMode = false; 
-    searchByIdBtn.classList.remove('active');
-    searchInput.classList.remove('unique-id-mode');
-    searchInput.placeholder = '搜索影片、演员、系列...';
+    if (searchByIdBtn) searchByIdBtn.classList.remove('active');
+    if (searchInput) {
+      searchInput.classList.remove('unique-id-mode');
+      searchInput.placeholder = '搜索影片、演员、系列...';
+    }
 
 
     updateSortButtonsUI();
-    renderLibraryFilters();
+
     renderTagPanel();
 
-    genericViewPage.style.display = 'none';
-    numberViewPage.style.display = 'none';
-    seriesViewPage.style.display = 'none';
-    videoDetailPageHoverCardDiv.style.display = 'none';
+    if(genericViewPage) genericViewPage.style.display = 'none';
+    if(numberViewPage) numberViewPage.style.display = 'none';
+    if(seriesViewPage) seriesViewPage.style.display = 'none';
+    if(videoDetailPageHoverCardDiv) videoDetailPageHoverCardDiv.style.display = 'none';
     const filteredTitle = document.getElementById('filteredWorksTitle');
     if (filteredTitle) filteredTitle.style.display = 'none';
 
-    homepage.style.display = 'block';
-    paginationDiv.style.display = 'flex';
-    contentArea.style.display = 'block';
+    if(homepage) homepage.style.display = 'block';
+    if(paginationDiv) paginationDiv.style.display = 'flex';
+    if(contentArea) contentArea.style.display = 'block';
 
     if (currentGenericViewConfig) {
         isGenericListExpanded = false;
@@ -1744,9 +1693,10 @@ function resetAndShowHome() {
         updateURL('/movies_home', '电影首页');
     }
 
-    document.getElementById('randomCarousel').style.display = 'block';
-    libraryFiltersDiv.style.display = 'flex'; 
-    tagBtn.style.display = 'block';
+    const randomCarouselDiv = document.getElementById('randomCarousel');
+    if (randomCarouselDiv) randomCarouselDiv.style.display = 'block';
+
+    if(tagBtn) tagBtn.style.display = 'block';
 
 
     showRandomMovieRecommendations();
@@ -1759,12 +1709,16 @@ function filterMovieType(type) {
     resetAndShowHome(); 
 }
 
-tagBtn.addEventListener('click', (event) => {
-  event.stopPropagation();
-  tagPanel.classList.toggle('active');
-});
+if (tagBtn) {
+  tagBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    tagPanel.classList.toggle('active');
+  });
+}
+
 
 function renderTagPanel() { 
+  if (!tagPanel) return;
   tagPanel.innerHTML = '';
   const allOptionDiv = createTagOption('全部类型', selectedMovieTags.length === 0 || selectedMovieTags.includes('全部类型'));
   tagPanel.appendChild(allOptionDiv);
@@ -1812,6 +1766,10 @@ function toggleMovieTagFilter(tag, isChecked) {
 }
 
 async function showRandomMovieRecommendations() {
+  if (!carouselSlide) {
+      console.warn("carouselSlide element not found, skipping recommendations.");
+      return;
+  }
   carouselSlide.innerHTML = '<div class="loading-indicator">加载推荐中...</div>';
   try {
     const fetchOptions = {
@@ -1833,13 +1791,13 @@ async function showRandomMovieRecommendations() {
 
     let html = '';
     randomItems.forEach(item => {
-      let imageUrl = 'placeholder-thumb.png'; 
+      let imageUrl = placeholderGridImg; 
       if (item.Id && item.BackdropImageTags && item.BackdropImageTags.length > 0) { 
           imageUrl = `${MOVIE_API_BASE_URL}/images/fanart/${item.Id}`; 
       }
       html += `
         <div class="carousel-item" onclick="openMovieDetailPage('${item.Id || item.uniqueid_num}')" title="${item.Name}"> 
-          <img src="${imageUrl}" alt="${item.Name}" loading="lazy" onerror="this.onerror=null; this.src='placeholder-thumb.png';">
+          <img src="${imageUrl}" alt="${item.Name}" loading="lazy" onerror="this.onerror=null; this.src='${placeholderGridImg}';">
           <div class="carousel-item-title">${item.Name}</div>
         </div>
       `;
@@ -1915,6 +1873,10 @@ function setupCarouselLooping() {
 
 
 async function fetchHomePageData() {
+  if(!contentArea) {
+      console.warn("contentArea element not found, cannot fetch home page data.");
+      return;
+  }
   contentArea.innerHTML = '<div class="loading-indicator">加载电影内容中...</div>';
   const startIndex = (currentPage - 1) * window.pageSize;
 
@@ -1923,15 +1885,11 @@ async function fetchHomePageData() {
     Limit: window.pageSize,
     SortBy: currentSortBy,
     SortOrder: currentSortOrder,
-    SearchTerm: currentSearchTerm, 
-    IncludeItemTypes: currentContentTypeFilter || null, 
-    Genres: selectedMovieTags.length > 0 && !selectedMovieTags.includes('全部类型') ? selectedMovieTags.join(',') : null,
-    ParentId: selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null,
+    SearchTerm: currentSearchTerm,
+    IncludeItemTypes: currentContentTypeFilter || null,
+    Genres: selectedMovieTags.length > 0 && !selectedMovieTags.includes('全部类型') ? selectedMovieTags.join(',') : null
+    // ParentId 相关的逻辑已移除
   };
-  if (selectedMovieLibraries.length > 1) {
-      delete fetchOptions.ParentId;
-      console.warn("Multiple libraries selected, fetching from all. Backend doesn't support multiple ParentIds directly in one query.");
-  }
 
   try {
     const responseData = await fetchLocalMediaItems(fetchOptions, true);
@@ -2017,7 +1975,7 @@ async function fetchLocalMediaItems(options, returnFullResponse = false) {
 
 function createMovieCarouselGrid(sectionTitle, items) {
   if (!items || items.length === 0) { return ''; }
-  const placeholderGridImg = '/static/placeholder_poster.png';
+  
   let gridHTML = `
     <div class="section">
       <h2 class="section-title">${sectionTitle} (${items.length})</h2>
@@ -2029,7 +1987,7 @@ function createMovieCarouselGrid(sectionTitle, items) {
     if (itemIdForLink) {
         imageUrl = `${MOVIE_API_BASE_URL}/images/poster/${itemIdForLink}`;
     }
-    const itemLikedClass = item.is_liked ? 'liked-item' : ''; // NEW: class for the .carousel-item
+    const itemLikedClass = item.is_liked ? 'liked-item' : ''; 
 
     gridHTML += `
       <div class="carousel-item ${itemLikedClass}" 
@@ -2050,6 +2008,7 @@ function openMovieDetailPage(itemId) {
 }
 
 async function showMovieHoverCard(event, itemId) {
+    if(!videoDetailPageHoverCardDiv) return;
     const hoverCard = videoDetailPageHoverCardDiv; 
     hoverCard.style.display = 'block';
     hoverCard.innerHTML = '<div class="loading-indicator" style="padding:20px; font-size:0.9em;">加载中...</div>';
@@ -2098,15 +2057,16 @@ async function showMovieHoverCard(event, itemId) {
 }
 
 function hideMovieHoverCard() {
-    videoDetailPageHoverCardDiv.style.display = 'none';
+    if(videoDetailPageHoverCardDiv) videoDetailPageHoverCardDiv.style.display = 'none';
 }
 
 function renderMovieHoverDetail(item) { 
+    if (!videoDetailPageHoverCardDiv) return;
     if (!item) { 
         videoDetailPageHoverCardDiv.innerHTML = `<div class="video-detail-container"><p style="color: var(--accent-color);">无详情信息。</p></div>`;
         return;
     }
-    let posterUrl = 'placeholder-detail.png';
+    let posterUrl = placeholderGridImg; // Use the global placeholder
     if (item.Id) { 
         posterUrl = `${MOVIE_API_BASE_URL}/images/poster/${item.Id}`;
     }
@@ -2129,7 +2089,7 @@ function renderMovieHoverDetail(item) {
 
     const detailHTML = `
         <div class="video-detail-container">
-            <img src="${posterUrl}" alt="${item.Name}" class="video-detail-backdrop" onerror="this.onerror=null; this.src='placeholder-detail.png';">
+            <img src="${posterUrl}" alt="${item.Name}" class="video-detail-backdrop" onerror="this.onerror=null; this.src='${placeholderGridImg}';">
             <h2 class="video-detail-title">${item.Name} ${year !== 'N/A' ? `(${year})` : ''}</h2>
             <div class="video-detail-info">
                 <span>评分: ${rating}</span>
@@ -2152,6 +2112,7 @@ function renderMovieHoverDetail(item) {
 }
 
 function updateMoviePagination() {
+    if (!currentPageInput || !pageInfoSpan || !prevPageBtn || !nextPageBtn || !paginationDiv) return;
     totalPages = Math.max(1, Math.ceil(totalItems / window.pageSize));
     currentPage = Math.max(1, Math.min(currentPage, totalPages));
     currentPageInput.value = currentPage;
@@ -2182,15 +2143,16 @@ function nextPage() {
 
 async function fetchLocalMovieGenres() {
   try {
-    const parentIdParam = selectedMovieLibraries.length === 1 ? `?ParentId=${encodeURIComponent(selectedMovieLibraries[0])}` : '';
+    // const parentIdParam = selectedMovieLibraries.length === 1 ? `?ParentId=${encodeURIComponent(selectedMovieLibraries[0])}` : ''; // <--- 移除或修改
+    const parentIdParam = ''; // 获取所有库的类型
     const response = await fetch(`${MOVIE_API_BASE_URL}/genres${parentIdParam}`);
     if (!response.ok) throw new Error(`HTTP error ${response.status}`);
-    movieGenres = await response.json(); 
+    movieGenres = await response.json();
   } catch (error) {
     console.error('获取电影类型失败:', error);
     movieGenres = [];
   }
-  renderTagPanel(); 
+  renderTagPanel();
 }
 
 async function fetchLocalMovieLibraries() {
@@ -2202,63 +2164,19 @@ async function fetchLocalMovieLibraries() {
     console.error('获取电影媒体库失败:', error);
     movieLibraries = [];
   }
-  renderLibraryFilters(); 
+
 }
 
-function renderLibraryFilters() { 
-  libraryFiltersDiv.innerHTML = '';
-  const allFilterDiv = createLibraryFilterOption('全部媒体库', '', selectedMovieLibraries.length === 0);
-  libraryFiltersDiv.appendChild(allFilterDiv);
-  movieLibraries.forEach(lib => {
-    const filterDiv = createLibraryFilterOption(lib.Name, lib.Id, selectedMovieLibraries.includes(lib.Id));
-    libraryFiltersDiv.appendChild(filterDiv);
-  });
-}
 
-function createLibraryFilterOption(name, id, isChecked) { 
-    const filterDiv = document.createElement('div');
-    filterDiv.classList.add('library-filter');
-    if (isChecked) filterDiv.classList.add('active');
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    const uniqueId = `movie-lib-${(id || 'all').replace(/[^a-zA-Z0-9]/g, '-')}`;
-    checkbox.id = uniqueId;
-    checkbox.value = id; 
-    checkbox.checked = isChecked;
-    checkbox.addEventListener('change', (e) => {
-      toggleMovieLibraryFilter(id, e.target.checked);
-    });
-    const label = document.createElement('label');
-    label.setAttribute('for', uniqueId);
-    label.textContent = name;
-    filterDiv.addEventListener('click', (e) => {
-        if (e.target !== checkbox) {
-            checkbox.checked = !checkbox.checked;
-            checkbox.dispatchEvent(new Event('change'));
-        }
-    });
-    filterDiv.appendChild(checkbox);
-    filterDiv.appendChild(label);
-    return filterDiv;
-}
 
-function toggleMovieLibraryFilter(libId, isChecked) {
-    if (libId === '') { 
-        selectedMovieLibraries = isChecked ? [] : selectedMovieLibraries; 
-    } else {
-        const currentLibs = new Set(selectedMovieLibraries);
-        if (isChecked) currentLibs.add(libId);
-        else currentLibs.delete(libId);
-        selectedMovieLibraries = Array.from(currentLibs);
-    }
-    currentPage = 1;
-    renderLibraryFilters(); 
-    fetchLocalMovieGenres(); 
-    fetchHomePageData(); 
-}
+
+
+
 
 function updateSortButtonsUI() { 
-    document.querySelectorAll('#sortContainer .sort-button').forEach(btn => { 
+    const sortContainer = document.getElementById('sortContainer');
+    if (!sortContainer) return;
+    sortContainer.querySelectorAll('.sort-button').forEach(btn => { 
         const sortField = btn.dataset.sort;
         if (sortField === currentSortBy) {
             btn.classList.add('active');
@@ -2314,11 +2232,14 @@ function handleGlobalSearch() {
                 if (activePrefixElement) {
                     const activePrefix = activePrefixElement.textContent.split(' ')[0];
                     searchByNumberPrefix(activePrefix);
-                } else if (document.getElementById('manualNumberPrefixInput').value.trim() !== '') {
-                    const manualPrefix = document.getElementById('manualNumberPrefixInput').value.trim();
-                    searchByNumberPrefix(manualPrefix);
                 } else {
-                    console.log("Global search input does not directly filter the Number View prefixes or initiate a new number search without a prefix.");
+                    const manualNumberInputElement = document.getElementById('manualNumberPrefixInput');
+                    if (manualNumberInputElement && manualNumberInputElement.value.trim() !== '') {
+                        const manualPrefix = manualNumberInputElement.value.trim();
+                        searchByNumberPrefix(manualPrefix);
+                    } else {
+                         console.log("Global search input does not directly filter the Number View prefixes or initiate a new number search without a prefix.");
+                    }
                 }
                 break;
             default:
@@ -2330,7 +2251,7 @@ function handleGlobalSearch() {
 
 async function searchByFuzzyNumber() {
     showNumberView(false); 
-    numberResultsContainer.innerHTML = '<div class="loading-indicator">番号模糊搜索中...</div>';
+    if (numberResultsContainer) numberResultsContainer.innerHTML = '<div class="loading-indicator">番号模糊搜索中...</div>';
     try {
         const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
         const response = await fetchLocalMediaItems({
@@ -2340,15 +2261,17 @@ async function searchByFuzzyNumber() {
             SortBy: 'SortName', SortOrder: 'Ascending'
         }, true);
         const items = response.Items || [];
-        if (items.length > 0) {
-            const gridHTML = createMovieCarouselGrid(`番号模糊搜索结果 (${items.length})`, items);
-            numberResultsContainer.innerHTML = gridHTML;
-        } else {
-            numberResultsContainer.innerHTML = `<p style="text-align:center;color:var(--secondary-text);padding-top:50px;">未找到包含 "${currentSearchTerm}" 的番号影片。</p>`;
+        if (numberResultsContainer) {
+            if (items.length > 0) {
+                const gridHTML = createMovieCarouselGrid(`番号模糊搜索结果 (${items.length})`, items);
+                numberResultsContainer.innerHTML = gridHTML;
+            } else {
+                numberResultsContainer.innerHTML = `<p style="text-align:center;color:var(--secondary-text);padding-top:50px;">未找到包含 "${currentSearchTerm}" 的番号影片。</p>`;
+            }
         }
     } catch (err) {
         console.error("Error searching by fuzzy number:", err);
-        numberResultsContainer.innerHTML = `<p style="text-align:center;color:var(--accent-color);padding-top:50px;">番号模糊搜索失败。</p>`;
+        if (numberResultsContainer) numberResultsContainer.innerHTML = `<p style="text-align:center;color:var(--accent-color);padding-top:50px;">番号模糊搜索失败。</p>`;
     }
 }
 
@@ -2361,30 +2284,38 @@ async function showGenericView(configType, updateHist = true) {
     currentGenericViewConfig = config;
     currentView = config.type; 
     allGenericData = []; genericSortBy = 'movieCount'; genericSortOrder = 'Descending'; isGenericListExpanded = false; selectedGenericIds.clear();
-    homepage.style.display = 'none';
-    numberViewPage.style.display = 'none'; seriesViewPage.style.display = 'none'; videoDetailPageHoverCardDiv.style.display = 'none';
-    genericViewPage.style.display = 'block'; paginationDiv.style.display = 'none';
-    genericViewTitle.textContent = config.title + '列表';
+    
+    if(homepage) homepage.style.display = 'none';
+    if(numberViewPage) numberViewPage.style.display = 'none'; 
+    if(seriesViewPage) seriesViewPage.style.display = 'none'; 
+    if(videoDetailPageHoverCardDiv) videoDetailPageHoverCardDiv.style.display = 'none';
+    if(genericViewPage) genericViewPage.style.display = 'block'; 
+    if(paginationDiv) paginationDiv.style.display = 'none';
+    if(genericViewTitle) genericViewTitle.textContent = config.title + '列表';
     updateGenericSortButtons();
-    genericListContainer.innerHTML = `<div class="loading-indicator">加载${config.placeholderName}列表中...</div>`;
-    genericDetailsContainer.innerHTML = ''; genericExpandListBtn.style.display = 'none';
+    if(genericListContainer) genericListContainer.innerHTML = `<div class="loading-indicator">加载${config.placeholderName}列表中...</div>`;
+    if(genericDetailsContainer) genericDetailsContainer.innerHTML = ''; 
+    if(genericExpandListBtn) genericExpandListBtn.style.display = 'none';
+    
     if (updateHist) updateURL(config.targetUrl, config.title + '列表');
     await loadGenericData(); 
 }
 
 async function loadGenericData() { 
-    if (!currentGenericViewConfig) return;
+    if (!currentGenericViewConfig || !genericListContainer) return;
     genericListContainer.innerHTML = `<div class="loading-indicator">获取${currentGenericViewConfig.placeholderName}数据中...</div>`;
     allGenericData = [];
     const config = currentGenericViewConfig;
     
-    const parentIdParam = selectedMovieLibraries.length === 1 ? `&ParentId=${encodeURIComponent(selectedMovieLibraries[0])}` : '';
-    let url = '';
-    if (config.type === 'actor' || config.type === 'director') {
-        url = `${MOVIE_API_BASE_URL}/persons?PersonType=${config.type.charAt(0).toUpperCase() + config.type.slice(1)}${parentIdParam}`;
-    } else if (config.type === 'studio') {
-        url = `${MOVIE_API_BASE_URL}/studios?${parentIdParam.substring(1)}`; 
-    } else { return; }
+				// const parentIdParam = selectedMovieLibraries.length === 1 ? `&ParentId=${encodeURIComponent(selectedMovieLibraries[0])}` : ''; // <--- 移除或修改
+				const parentIdParam = ''; // 获取所有库的演员/导演/工作室
+				let url = '';
+				if (config.type === 'actor' || config.type === 'director') {
+								url = `${MOVIE_API_BASE_URL}/persons?PersonType=${config.type.charAt(0).toUpperCase() + config.type.slice(1)}${parentIdParam}`;
+				} else if (config.type === 'studio') {
+								// url = `${MOVIE_API_BASE_URL}/studios?${parentIdParam.substring(1)}`; // 如果 parentIdParam 是 '&...'
+								url = `${MOVIE_API_BASE_URL}/studios${parentIdParam}`; // 如果 parentIdParam 是 '?...' 或空
+				} else { return; }
 
     try {
         const response = await fetch(url);
@@ -2401,7 +2332,7 @@ async function loadGenericData() {
         sortGenericItems(genericSortBy, false); 
         if (allGenericData.length === 0) { 
             genericListContainer.innerHTML = `<p class="loading-indicator" style="color: var(--secondary-text);">未找到${config.placeholderName}。</p>`;
-            genericExpandListBtn.style.display = 'none';
+            if(genericExpandListBtn) genericExpandListBtn.style.display = 'none';
         } else { 
             renderGenericList(); 
         }
@@ -2417,24 +2348,21 @@ async function fetchGenericDataAndMovies(itemId) {
     const itemData = allGenericData.find(d => d.id === itemId); 
     if (!itemData) throw new Error(`找不到 ${itemId} 的基础数据`);
 
-				let itemImageUrl = null;
-				if (config.type === 'actor') { // 只针对演员类型处理
-								// 直接使用演员的名字 (itemData.name) 来构建图片URL
-								// 确保 itemData.name 是存在的
-								if (itemData.name) {
-												itemImageUrl = `${MOVIE_API_BASE_URL}/images/actor_thumb/${encodeURIComponent(itemData.name)}`;
-												// console.log(`Generic view: Using actor name '${itemData.name}' for image URL: ${itemImageUrl}`);
-								} else {
-												console.warn(`Actor (ID: ${itemData.id}) is missing a name. Cannot generate image URL.`);
-								}
-				}
+	let itemImageUrl = null;
+	if (config.type === 'actor') { 
+		if (itemData.name) {
+			itemImageUrl = `${MOVIE_API_BASE_URL}/images/actor_thumb/${encodeURIComponent(itemData.name)}`;
+		} else {
+			console.warn(`Actor (ID: ${itemData.id}) is missing a name. Cannot generate image URL.`);
+		}
+	}
     
     let itemMovies = [];
     try {
         const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
         const moviesResponse = await fetchLocalMediaItems({
             [config.apiQueryParam]: itemId, 
-            ParentId: parentIdFilter,
+
             Limit: 50000, 
             SortBy: 'PremiereDate', SortOrder: 'Descending'
         }, true); 
@@ -2444,7 +2372,7 @@ async function fetchGenericDataAndMovies(itemId) {
 }
 
 function renderSingleGenericRow(itemData, itemImageUrl, itemMovies) {
-    if (!itemData || !currentGenericViewConfig) return;
+    if (!itemData || !currentGenericViewConfig || !genericDetailsContainer) return;
     const config = currentGenericViewConfig;
     const detailItemDiv = document.createElement('div');
     detailItemDiv.classList.add('actor-detail-item');
@@ -2476,7 +2404,7 @@ function renderSingleGenericRow(itemData, itemImageUrl, itemMovies) {
     if (itemMovies && itemMovies.length > 0) {
         itemMovies.forEach(movie => {
             const movieImg = document.createElement('img');
-            const posterUrl = movie.Id ? `${MOVIE_API_BASE_URL}/images/poster/${movie.Id}` : '${placeholderGridImg}';
+            const posterUrl = movie.Id ? `${MOVIE_API_BASE_URL}/images/poster/${movie.Id}` : placeholderGridImg;
             movieImg.src = posterUrl; 
             movieImg.onerror = () => { movieImg.src = placeholderMoviePosterImg; };
             movieImg.alt = movie.Name; movieImg.title = movie.Name;
@@ -2493,9 +2421,12 @@ function renderSingleGenericRow(itemData, itemImageUrl, itemMovies) {
 }
 
 function renderGenericList() { 
-    if (!currentGenericViewConfig) return;
+    if (!currentGenericViewConfig || !genericListContainer) return;
     genericListContainer.innerHTML = '';
-    if (allGenericData.length === 0) { genericExpandListBtn.style.display = 'none'; return; }
+    if (allGenericData.length === 0) { 
+        if (genericExpandListBtn) genericExpandListBtn.style.display = 'none'; 
+        return; 
+    }
     const config = currentGenericViewConfig;
     const maxInitialItems = 40; 
     
@@ -2504,9 +2435,9 @@ function renderGenericList() {
     );
 
     if (filteredGenericData.length === 0) {
-        genericListContainer.innerHTML = `<p class="loading-indicator" style="color: var(--secondary-text);">没有找到符合条件的${config.placeholderName}。</p>`;
-        genericExpandListBtn.style.display = 'none';
-        genericDetailsContainer.innerHTML = ''; 
+        genericListContainer.innerHTML = `<p class="loading-indicator" style="color: var(--secondary-text);">沒有找到符合条件的${config.placeholderName}。</p>`;
+        if (genericExpandListBtn) genericExpandListBtn.style.display = 'none';
+        if (genericDetailsContainer) genericDetailsContainer.innerHTML = ''; 
         return;
     }
 
@@ -2527,13 +2458,15 @@ function renderGenericList() {
         genericListContainer.appendChild(itemSpan);
     });
 
-    if (filteredGenericData.length > maxInitialItems) {
-        genericExpandListBtn.style.display = 'block';
-        genericExpandListBtn.textContent = isGenericListExpanded ? '↑收起↑' : '↓展开↓';
-        genericListContainer.classList.toggle('expanded', isGenericListExpanded);
-    } else {
-        genericExpandListBtn.style.display = 'none';
-        genericListContainer.classList.remove('expanded');
+    if (genericExpandListBtn) {
+        if (filteredGenericData.length > maxInitialItems) {
+            genericExpandListBtn.style.display = 'block';
+            genericExpandListBtn.textContent = isGenericListExpanded ? '↑收起↑' : '↓展开↓';
+            genericListContainer.classList.toggle('expanded', isGenericListExpanded);
+        } else {
+            genericExpandListBtn.style.display = 'none';
+            genericListContainer.classList.remove('expanded');
+        }
     }
 }
 function toggleGenericListExpansion() { isGenericListExpanded = !isGenericListExpanded; renderGenericList(); }
@@ -2568,12 +2501,14 @@ function sortGenericItems(sortBy, shouldRender = true) {
     if (selectedGenericIds.size > 0 && shouldRender) updateGenericDetails();
 }
 function updateGenericSortButtons() { 
-    document.querySelectorAll('#genericPersonStudioViewPage .actor-sort-controls .sort-button').forEach(btn => btn.classList.remove('active', 'desc'));
+    const genericViewPageElem = document.getElementById('genericPersonStudioViewPage');
+    if (!genericViewPageElem) return;
+    genericViewPageElem.querySelectorAll('.actor-sort-controls .sort-button').forEach(btn => btn.classList.remove('active', 'desc'));
     const activeBtn = genericSortBy === 'name' ? genericSortByNameBtn : genericSortByCountBtn;
     if (activeBtn) { activeBtn.classList.add('active'); if (genericSortOrder === 'Descending') activeBtn.classList.add('desc'); }
 }
 async function updateGenericDetails() { 
-    if (!currentGenericViewConfig) return;
+    if (!currentGenericViewConfig || !genericDetailsContainer) return;
     const config = currentGenericViewConfig;
     genericDetailsContainer.innerHTML = `<div class="loading-indicator">加载${config.placeholderItemName}中...</div>`;
     const selectedCount = selectedGenericIds.size;
@@ -2590,7 +2525,7 @@ async function updateGenericDetails() {
     }
 }
 async function showSingleGenericDetails(itemId) { 
-    if (!currentGenericViewConfig) return;
+    if (!currentGenericViewConfig || !genericDetailsContainer) return;
     const config = currentGenericViewConfig;
     genericDetailsContainer.innerHTML = `<div class="loading-indicator">加载${config.placeholderName}详情...</div>`;
     try {
@@ -2609,21 +2544,28 @@ async function showNumberView(updateHist = true) {
     if (filteredTitle) filteredTitle.style.display = 'none';
 
     isUniqueIdSearchMode = false;
-    searchByIdBtn.classList.remove('active');
-    searchInput.classList.remove('unique-id-mode');
-    searchInput.placeholder = '搜索影片、演员、系列...';
+    if(searchByIdBtn) searchByIdBtn.classList.remove('active');
+    if(searchInput) {
+        searchInput.classList.remove('unique-id-mode');
+        searchInput.placeholder = '搜索影片、演员、系列...';
+    }
 
 
     currentView = 'number';
-    homepage.style.display = 'none'; genericViewPage.style.display = 'none'; seriesViewPage.style.display = 'none'; videoDetailPageHoverCardDiv.style.display = 'none';
-    numberViewPage.style.display = 'block'; paginationDiv.style.display = 'none';
-    numberResultsContainer.innerHTML = '<p style="text-align:center;color:var(--secondary-text);padding-top:50px;">点击上方番号前缀或手动输入搜索。</p>';
+    if(homepage) homepage.style.display = 'none'; 
+    if(genericViewPage) genericViewPage.style.display = 'none'; 
+    if(seriesViewPage) seriesViewPage.style.display = 'none'; 
+    if(videoDetailPageHoverCardDiv) videoDetailPageHoverCardDiv.style.display = 'none';
+    if(numberViewPage) numberViewPage.style.display = 'block'; 
+    if(paginationDiv) paginationDiv.style.display = 'none';
+    if(numberResultsContainer) numberResultsContainer.innerHTML = '<p style="text-align:center;color:var(--secondary-text);padding-top:50px;">点击上方番号前缀或手动输入搜索。</p>';
     if (updateHist) updateURL('/numbers_view_page', '番号列表');
     await displayNumberPrefixes();
     window.scrollTo(0, 0);
 }
 
 async function displayNumberPrefixes() { 
+    if (!numberPrefixListContainer) return;
     numberPrefixListContainer.innerHTML = '<div class="loading-indicator">加载番号统计中...</div>';
     const prefixPromises = numberPrefixes.map(async prefix => {
         try {
@@ -2658,7 +2600,8 @@ async function displayNumberPrefixes() {
                     span.onclick = () => {
                         document.querySelectorAll('#numberPrefixListContainer .actor-list-item.active').forEach(el => el.classList.remove('active'));
                         span.classList.add('active');
-                        document.getElementById('manualNumberPrefixInput').value = ''; 
+                        const manualInput = document.getElementById('manualNumberPrefixInput');
+                        if (manualInput) manualInput.value = ''; 
                         searchByNumberPrefix(item.prefix);
                     };
                 }
@@ -2672,6 +2615,7 @@ async function displayNumberPrefixes() {
 }
 
 async function searchByNumberPrefix(prefix) {
+    if (!numberResultsContainer) return;
     numberResultsContainer.innerHTML = '<div class="loading-indicator">搜索影片中...</div>';
     try {
         const parentIdFilter = selectedMovieLibraries.length === 1 ? selectedMovieLibraries[0] : null;
@@ -2709,10 +2653,14 @@ async function showSeriesView(updateHist = true) {
     const filteredTitle = document.getElementById('filteredWorksTitle');
     if (filteredTitle) filteredTitle.style.display = 'none';
     currentView = 'series';
-    homepage.style.display = 'none'; genericViewPage.style.display = 'none'; numberViewPage.style.display = 'none'; videoDetailPageHoverCardDiv.style.display = 'none';
-    seriesViewPage.style.display = 'block'; paginationDiv.style.display = 'none';
-    seriesListContainer.innerHTML = '<div class="loading-indicator">加载系列中...</div>';
-    seriesTotalCountSpan.textContent = '总共获取了 0 个系列';
+    if(homepage) homepage.style.display = 'none'; 
+    if(genericViewPage) genericViewPage.style.display = 'none'; 
+    if(numberViewPage) numberViewPage.style.display = 'none'; 
+    if(videoDetailPageHoverCardDiv) videoDetailPageHoverCardDiv.style.display = 'none';
+    if(seriesViewPage) seriesViewPage.style.display = 'block'; 
+    if(paginationDiv) paginationDiv.style.display = 'none';
+    if(seriesListContainer) seriesListContainer.innerHTML = '<div class="loading-indicator">加载系列中...</div>';
+    if(seriesTotalCountSpan) seriesTotalCountSpan.textContent = '总共获取了 0 个系列';
     updateSeriesSortButtons();
     if (updateHist) updateURL('/series_view_page', '系列列表');
     await loadAllSeriesData(); 
@@ -2720,6 +2668,7 @@ async function showSeriesView(updateHist = true) {
 }
 async function loadAllSeriesData() { 
     allSeriesData = [];
+    if(!seriesListContainer) return;
     seriesListContainer.innerHTML = '<div class="loading-indicator">获取系列数据中...</div>';
     try {
         const parentIdParam = selectedMovieLibraries.length === 1 ? `?ParentId=${encodeURIComponent(selectedMovieLibraries[0])}` : '';
@@ -2804,7 +2753,7 @@ function renderSeriesMovies(series, containerElement) {
         const movieWrapper = document.createElement('div');
         movieWrapper.classList.add('series-movie-item-wrapper');
         const movieImg = document.createElement('img');
-        const posterUrl = movie.Id ? `${MOVIE_API_BASE_URL}/images/poster/${movie.Id}` : '${placeholderGridImg}';
+        const posterUrl = movie.Id ? `${MOVIE_API_BASE_URL}/images/poster/${movie.Id}` : placeholderGridImg;
         movieImg.src = posterUrl; 
         movieImg.onerror = () => { movieImg.src = placeholderMoviePosterImg; };
         movieImg.alt = movie.Name;
@@ -2842,7 +2791,9 @@ function setSeriesSort(sortBy) {
     updateSeriesSortButtons(); sortSeriesData(); renderSeriesList();
 }
 function updateSeriesSortButtons() { 
-    document.querySelectorAll('#seriesViewPage .series-summary-controls .sort-button').forEach(btn => {
+    const seriesViewPageElem = document.getElementById('seriesViewPage');
+    if (!seriesViewPageElem) return;
+    seriesViewPageElem.querySelectorAll('.series-summary-controls .sort-button').forEach(btn => {
         btn.classList.remove('active', 'desc');
         if (btn.id === `sortSeriesBy${currentSeriesSortBy.charAt(0).toUpperCase() + currentSeriesSortBy.slice(1)}Btn`) {
             btn.classList.add('active'); if (currentSeriesSortOrder === 'Descending') btn.classList.add('desc');
@@ -2851,6 +2802,7 @@ function updateSeriesSortButtons() {
 }
 
 function renderSeriesList() {
+    if(!seriesListContainer || !seriesTotalCountSpan) return;
     seriesListContainer.innerHTML = '';
     const filteredSeriesData = allSeriesData.filter(series => 
         currentSearchTerm === '' || series.name.toLowerCase().includes(currentSearchTerm.toLowerCase())
@@ -2923,7 +2875,9 @@ async function toggleSeriesExpansion(seriesId, forceExpand = null) {
     const seriesItemId = `series-item-${safeSuffix}`;
     const moviesContainerId = `series-movies-${safeSuffix}`;
     const moviesContainer = document.getElementById(moviesContainerId);
-    const headerDiv = document.querySelector(`#${seriesItemId} .series-item-header`); 
+    const itemDiv = document.getElementById(seriesItemId);
+    if (!itemDiv) return;
+    const headerDiv = itemDiv.querySelector('.series-item-header'); 
     const expandBtn = headerDiv ? headerDiv.querySelector('.series-item-expand-btn') : null;
     const newState = (forceExpand !== null) ? forceExpand : !series.isExpanded;
     if (newState === series.isExpanded && forceExpand === null) return;
@@ -2947,15 +2901,20 @@ async function toggleSeriesExpansion(seriesId, forceExpand = null) {
 async function showFilteredWorksView(type, id, name) { 
     console.log(`显示过滤作品 ${type}: ${name} (ID: ${id})`);
     isFilteredWorksViewActive = true; filteredWorksConfig = { type, id, name }; currentView = 'filteredWorks';
-    genericViewPage.style.display = 'none'; numberViewPage.style.display = 'none'; seriesViewPage.style.display = 'none'; videoDetailPageHoverCardDiv.style.display = 'none';
-    homepage.style.display = 'block'; contentArea.innerHTML = ''; paginationDiv.style.display = 'flex';
+    if(genericViewPage) genericViewPage.style.display = 'none'; 
+    if(numberViewPage) numberViewPage.style.display = 'none'; 
+    if(seriesViewPage) seriesViewPage.style.display = 'none'; 
+    if(videoDetailPageHoverCardDiv) videoDetailPageHoverCardDiv.style.display = 'none';
+    if(homepage) homepage.style.display = 'block'; 
+    if(contentArea) contentArea.innerHTML = ''; 
+    if(paginationDiv) paginationDiv.style.display = 'flex';
     let titleElem = document.getElementById('filteredWorksTitle');
     if (!titleElem) { 
         titleElem = document.createElement('h2'); titleElem.id = 'filteredWorksTitle'; titleElem.className = 'section-title'; titleElem.style.paddingLeft = '20px';
         const sortContainerElement = document.getElementById('sortContainer');
         if(sortContainerElement && sortContainerElement.parentNode) {
             sortContainerElement.parentNode.insertBefore(titleElem, sortContainerElement);
-        } else {
+        } else if (homepage) {
             homepage.insertBefore(titleElem, homepage.firstChild); 
         }
     }
@@ -2966,7 +2925,7 @@ async function showFilteredWorksView(type, id, name) {
     window.scrollTo(0, 0);
 }
 async function fetchAndDisplayFilteredWorks() { 
-    if (!isFilteredWorksViewActive || !filteredWorksConfig.id) return;
+    if (!isFilteredWorksViewActive || !filteredWorksConfig.id || !contentArea) return;
     contentArea.innerHTML = '<div class="loading-indicator">加载作品中...</div>';
     const { type, id, name } = filteredWorksConfig;
     const apiParam = { actor: 'personIds', director: 'personIds', studio: 'studioIds' }[type];
@@ -2994,7 +2953,7 @@ async function fetchAndDisplayFilteredWorks() {
     }
 }
 function renderFilteredWorksCurrentPage() { 
-    if (!isFilteredWorksViewActive || !allFilteredWorksData) return;
+    if (!isFilteredWorksViewActive || !allFilteredWorksData || !contentArea) return;
     const startIndex = (currentPage - 1) * window.pageSize;
     totalItems = allFilteredWorksData.length;
     totalPages = Math.max(1, Math.ceil(totalItems / window.pageSize));
@@ -3075,34 +3034,40 @@ function generateSafeIdSuffixForSeries(seriesObject) {
 function toggleUniqueIdSearchMode() {
     isUniqueIdSearchMode = !isUniqueIdSearchMode;
     if (isUniqueIdSearchMode) {
-        searchByIdBtn.classList.add('active');
-        searchInput.classList.add('unique-id-mode');
-        searchInput.placeholder = '搜索番号';
+        if(searchByIdBtn) searchByIdBtn.classList.add('active');
+        if(searchInput) {
+            searchInput.classList.add('unique-id-mode');
+            searchInput.placeholder = '搜索番号';
+        }
         currentView = 'uniqueIdSearch'; 
-        document.getElementById('randomCarousel').style.display = 'none';
-        libraryFiltersDiv.style.display = 'none';
-        tagBtn.style.display = 'none';
-        tagPanel.classList.remove('active'); 
-        homepage.style.display = 'block';
-        contentArea.style.display = 'block';
-        paginationDiv.style.display = 'flex';
-        genericViewPage.style.display = 'none';
-        numberViewPage.style.display = 'none';
-        seriesViewPage.style.display = 'none';
-        videoDetailPageHoverCardDiv.style.display = 'none';
+        const randomCarouselDiv = document.getElementById('randomCarousel');
+        if(randomCarouselDiv) randomCarouselDiv.style.display = 'none';
+
+        if(tagBtn) tagBtn.style.display = 'none';
+        if(tagPanel) tagPanel.classList.remove('active'); 
+        if(homepage) homepage.style.display = 'block';
+        if(contentArea) contentArea.style.display = 'block';
+        if(paginationDiv) paginationDiv.style.display = 'flex';
+        if(genericViewPage) genericViewPage.style.display = 'none';
+        if(numberViewPage) numberViewPage.style.display = 'none';
+        if(seriesViewPage) seriesViewPage.style.display = 'none';
+        if(videoDetailPageHoverCardDiv) videoDetailPageHoverCardDiv.style.display = 'none';
         const filteredTitle = document.getElementById('filteredWorksTitle');
         if (filteredTitle) filteredTitle.style.display = 'none';
     } else {
-        searchByIdBtn.classList.remove('active');
-        searchInput.classList.remove('unique-id-mode');
-        searchInput.placeholder = '搜索影片、演员、系列...';
+        if(searchByIdBtn) searchByIdBtn.classList.remove('active');
+        if(searchInput) {
+            searchInput.classList.remove('unique-id-mode');
+            searchInput.placeholder = '搜索影片、演员、系列...';
+        }
         resetAndShowHome(); 
     }
     currentPage = 1; 
-    currentSearchTerm = searchInput.value.trim(); 
+    currentSearchTerm = searchInput ? searchInput.value.trim() : ''; 
     handleGlobalSearch(); 
 }
 async function fetchFuzzyUniqueIdMovies() {
+    if(!contentArea) return;
     contentArea.innerHTML = '<div class="loading-indicator">番号模糊搜索中...</div>';
     const startIndex = (currentPage - 1) * window.pageSize;
     try {
