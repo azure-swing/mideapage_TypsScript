@@ -196,19 +196,26 @@ movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', (c) => serveMovieImage(c,
 
 
 // GET /api_movies/images/actor_thumb/:actor_name
+// GET /api_movies/images/actor_thumb/:actor_name
 movieApiApp.get('/images/actor_thumb/:actor_name{.+}', async (c) => {
-    const actorName = c.req.param('actor_name');
-    const dbRow: { thumb_path: string } | null = await c.env.DB_MOVIES.prepare("SELECT thumb_path FROM actors_info WHERE name = ?")
-        .bind(actorName)
-        .first();
+    const actorName = c.req.param('actor_name'); // 获取演员名字
 
-    if (dbRow && dbRow.thumb_path) {
-        const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${c.env.ACTOR_THUMBS_R2_SUBFOLDER}/${dbRow.thumb_path}`.replace(/\/\//g, '/');
-        return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
-    }
-    return c.text("Actor thumb not found", 404);
+    // 1. 对演员名字进行规范化处理，以便匹配文件名
+    // 通常会将名字转换为小写，替换空格为下划线或连字符，并去除特殊字符
+    // 这里我们直接使用传过来的名字，并假设 R2 文件名就是 "演员名字.avif"
+    // 注意：文件名可能包含空格或特殊字符，这些在URL中是编码的，但R2 key是原始的
+    const fileName = `${actorName}.avif`;
+
+    // 2. 构建 R2 存储桶中的完整 Key
+    // 根据你的描述，路径是：<BASE_PREFIX>movies/actors_photo/<actor_name>.avif
+    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}movies/actors_photo/${fileName}`.replace(/\/\//g, '/');
+
+    console.log(`Attempting to access R2 actor image key: ${r2Key} for actor: ${actorName}`);
+
+    // 3. 直接从 R2 存储桶提供文件
+    // serveFileFromR2 应该处理文件不存在的情况，并返回 404
+    return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
 });
-
 // GET /api_movies/stream/:item_id_or_num
 movieApiApp.get('/stream/:item_id_or_num{.+}', async (c) => {
     const itemIdOrNum = c.req.param('item_id_or_num');
