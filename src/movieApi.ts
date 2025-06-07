@@ -7,7 +7,7 @@ import { serveFileFromR2 } from './r2Utils';
 export const movieApiApp = new Hono<{ Bindings: Env }>();
 
 // GET /api_movies/items
-movieApiApp.get('/items', async (c) => {
+movieApiApp。get('/items', async (c) => {
   const query = c.req.query();
   const startIndex = parseInt(query['StartIndex'] || '0', 10);
   const limit = parseInt(query['Limit'] || '100', 10);
@@ -55,14 +55,14 @@ movieApiApp.get('/items', async (c) => {
 });
 
 // GET /api_movies/items/:item_id_or_num
-movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
+movieApiApp。get('/items/:item_id_or_num{.+}', async (c) => {
   const itemIdOrNum = c.req.param('item_id_or_num');
   let movieRaw: any;
 
   if (!isNaN(parseInt(itemIdOrNum, 10))) {
     movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
   } else {
-    movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
+    movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE uniqueid_num = ?")。bind(itemIdOrNum).first();
   }
 
   if (!movieRaw) {
@@ -179,7 +179,7 @@ async function serveMovieImage(c: Context<{ Bindings: Env }>, imageType: 'poster
   // The `effectiveId` is now guaranteed to be the non-numeric unique ID (or a numeric one we've decided not to redirect).
   const prefix = effectiveId.split('-')[0];
   // Note: Your original code stored both poster and fanart in 'movies_poster'. Adjust if this is incorrect.
-  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${effectiveId}_${imageType}.avif`.replace(/\/\//g, '/');
+  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies_poster/${prefix}/${effectiveId}_${imageType}.avif`.replace(/\/\//g, '/');
 
   console.log(`Attempting to access R2 key: ${r2Key} for ID: ${effectiveId}`);
 
