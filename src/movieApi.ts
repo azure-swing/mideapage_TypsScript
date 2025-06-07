@@ -141,59 +141,56 @@ movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
 
 // --- MODIFIED START: POSTER IMAGE LOGIC ---
 // GET /api_movies/images/poster/:movie_id_or_num
-movieApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
+moviewApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
   const movieIdOrNum = c.req.param('movie_id_or_num');
   
-  // 1. 定义 dbRow 类型，包含两个路径字段
-  let dbRow: { folder_path_relative: string, poster_file_relative_path: string } | null = null;
-  
-  // 2. 修改 SQL 查询，获取两个路径字段
-  const query = "SELECT folder_path_relative, poster_file_relative_path FROM movies WHERE";
-
+  // 如果是数字ID，需要先查询获取uniqueid_num
   if (!isNaN(parseInt(movieIdOrNum, 10))) {
-    dbRow = await c.env.DB_MOVIES.prepare(`${query} id = ?`).bind(parseInt(movieIdOrNum, 10)).first();
-  } else {
-    dbRow = await c.env.DB_MOVIES.prepare(`${query} uniqueid_num = ?`).bind(movieIdOrNum).first();
+    const dbRow = await c.env.DB_MOVIES.prepare("SELECT uniqueid_num FROM movies WHERE id = ?")
+      .bind(parseInt(movieIdOrNum, 10))
+      .first<{uniqueid_num: string}>();
+    
+    if (dbRow && dbRow.uniqueid_num) {
+      // 重定向到使用uniqueid_num的URL
+      return c.redirect(`/api_movies/images/poster/${dbRow.uniqueid_num}`);
+    }
+    return c.text("Poster not found", 404);
   }
-
-  // 3. 检查新字段并拼接它们以构建 R2 Key
-  if (dbRow && dbRow.folder_path_relative && dbRow.poster_file_relative_path) {
-    const fullRelativePath = `${dbRow.folder_path_relative}/${dbRow.poster_file_relative_path}`;
-    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${fullRelativePath}`.replace(/\/\//g, '/');
-    return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
-  }
-
-  return c.text("Poster not found", 404);
+  
+  // 使用uniqueid_num直接构建R2路径
+  // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
+  const prefix = movieIdOrNum.split('-')[0];
+  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/');
+  
+  return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
 });
 // --- MODIFIED END: POSTER IMAGE LOGIC ---
 
 
 // --- MODIFIED START: FANART IMAGE LOGIC ---
 // GET /api_movies/images/fanart/:movie_id_or_num
-movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
+moviewApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
   const movieIdOrNum = c.req.param('movie_id_or_num');
   
-  // 1. 定义 dbRow 类型，包含两个路径字段
-  // 假设 fanart 的字段名为 fanart_file_relative_path，请根据您的数据库进行调整
-  let dbRow: { folder_path_relative: string, fanart_file_relative_path: string } | null = null;
-  
-  // 2. 修改 SQL 查询，获取两个路径字段
-  const query = "SELECT folder_path_relative, fanart_file_relative_path FROM movies WHERE";
-
+  // 如果是数字ID，需要先查询获取uniqueid_num
   if (!isNaN(parseInt(movieIdOrNum, 10))) {
-    dbRow = await c.env.DB_MOVIES.prepare(`${query} id = ?`).bind(parseInt(movieIdOrNum,10)).first();
-  } else {
-    dbRow = await c.env.DB_MOVIES.prepare(`${query} uniqueid_num = ?`).bind(movieIdOrNum).first();
+    const dbRow = await c.env.DB_MOVIES.prepare("SELECT uniqueid_num FROM movies WHERE id = ?")
+      .bind(parseInt(movieIdOrNum, 10))
+      .first<{uniqueid_num: string}>();
+    
+    if (dbRow && dbRow.uniqueid_num) {
+      // 重定向到使用uniqueid_num的URL
+      return c.redirect(`/api_movies/images/fanart/${dbRow.uniqueid_num}`);
+    }
+    return c.text("Fanart not found", 404);
   }
-
-  // 3. 检查新字段并拼接它们以构建 R2 Key
-  if (dbRow && dbRow.folder_path_relative && dbRow.fanart_file_relative_path) {
-    const fullRelativePath = `${dbRow.folder_path_relative}/${dbRow.fanart_file_relative_path}`;
-    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/${fullRelativePath}`.replace(/\/\//g, '/');
-    return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
-  }
-
-  return c.text("Fanart not found", 404);
+  
+  // 使用uniqueid_num直接构建R2路径
+  // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
+  const prefix = movieIdOrNum.split('-')[0];
+  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_fanart.avif`.replace(/\/\//g, '/');
+  
+  return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
 });
 // --- MODIFIED END: FANART IMAGE LOGIC ---
 
