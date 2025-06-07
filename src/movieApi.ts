@@ -179,7 +179,7 @@ async function serveMovieImage(c: Context<{ Bindings: Env }>, imageType: 'poster
   // The `effectiveId` is now guaranteed to be the non-numeric unique ID (or a numeric one we've decided not to redirect).
   const prefix = effectiveId.split('-')[0];
   // Note: Your original code stored both poster and fanart in 'movies_poster'. Adjust if this is incorrect.
-  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies_poster/${prefix}/${effectiveId}_${imageType}.avif`.replace(/\/\//g, '/');
+  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${effectiveId}_${imageType}.avif`.replace(/\/\//g, '/');
 
   console.log(`Attempting to access R2 key: ${r2Key} for ID: ${effectiveId}`);
 
