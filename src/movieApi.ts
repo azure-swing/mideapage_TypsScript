@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, Context } from 'hono';
 import { Env, Movie, ActorInfoDb } from './types'; // Removed unused Comment, CollectionInfo for now
 import { getClientIp } from './auth';
 import { movieRowToDict, buildMovieWhereClauseAndParams, parseJsonField } from './dbUtils';
@@ -74,7 +74,7 @@ movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
 
 
 // POST /api_movies/items/:item_id_or_num/like
-movieApiApp.post('/items/:item_id_or_num/like', async (c) => { // Corrected endpoint to be more RESTful
+movieApiApp.post('/items/:item_id_or_num/like', async (c) => {
     const itemIdOrNum = c.req.param('item_id_or_num');
     const clientIp = getClientIp(c);
     let movieId: number | null = null;
@@ -107,7 +107,7 @@ movieApiApp.post('/items/:item_id_or_num/like', async (c) => { // Corrected endp
 });
 
 // DELETE /api_movies/items/:item_id_or_num/like
-movieApiApp.delete('/items/:item_id_or_num/like', async (c) => { // Corrected endpoint to be more RESTful
+movieApiApp.delete('/items/:item_id_or_num/like', async (c) => {
     const itemIdOrNum = c.req.param('item_id_or_num');
     const clientIp = getClientIp(c);
     let movieId: number | null = null;
@@ -139,71 +139,63 @@ movieApiApp.delete('/items/:item_id_or_num/like', async (c) => { // Corrected en
 });
 
 
-// --- MODIFIED START: POSTER IMAGE LOGIC ---
+// --- MODIFIED & REFACTORED START: IMAGE LOGIC ---
+
+/**
+ * A reusable helper function to serve movie images (poster or fanart).
+ * It handles resolving numeric IDs to uniqueid_num and avoids infinite redirect loops.
+ * @param c - Hono context
+ * @param imageType - Either 'poster' or 'fanart'
+ * @returns A Response object (file from R2, redirect, or error)
+ */
+async function serveMovieImage(c: Context<{ Bindings: Env }>, imageType: 'poster' | 'fanart') {
+  const movieIdOrNum = c.req.param('movie_id_or_num');
+  let effectiveId = movieIdOrNum; // This will hold the final uniqueid_num to use
+
+  // Step 1: Check if the input is a numeric ID that needs to be resolved to a uniqueid_num.
+  if (!isNaN(parseInt(movieIdOrNum, 10))) {
+    const dbRow = await c.env.DB_MOVIES.prepare("SELECT uniqueid_num FROM movies WHERE id = ?")
+      .bind(parseInt(movieIdOrNum, 10))
+      .first<{ uniqueid_num: string }>();
+
+    if (!dbRow || !dbRow.uniqueid_num) {
+      return c.text(`${imageType} not found for ID ${movieIdOrNum}`, 404);
+    }
+    
+    // *** CRITICAL FIX: AVOID INFINITE REDIRECT ***
+    // Only redirect if the resolved `uniqueid_num` is DIFFERENT from the requested numeric ID string.
+    // This prevents a loop if a movie's `id` and `uniqueid_num` are both '123'.
+    if (dbRow.uniqueid_num !== movieIdOrNum) {
+        const newUrl = `/api_movies/images/${imageType}/${dbRow.uniqueid_num}`;
+        return c.redirect(newUrl, 301); // Use 301 for permanent redirect
+    }
+    
+    // If we are here, it means the resolved ID is the same as the input, so no redirect is needed.
+    // We will proceed to serve the file directly using this ID.
+    effectiveId = dbRow.uniqueid_num;
+  }
+
+  // Step 2: Build the R2 key using the effective ID and serve the file.
+  // The `effectiveId` is now guaranteed to be the non-numeric unique ID (or a numeric one we've decided not to redirect).
+  const prefix = effectiveId.split('-')[0];
+  // Note: Your original code stored both poster and fanart in 'movies_poster'. Adjust if this is incorrect.
+  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${effectiveId}_${imageType}.avif`.replace(/\/\//g, '/');
+
+  console.log(`Attempting to access R2 key: ${r2Key} for ID: ${effectiveId}`);
+
+  return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
+}
+
 // GET /api_movies/images/poster/:movie_id_or_num
-movieApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => { // CORRECTED: `moviewApiApp` -> `movieApiApp`
-  const movieIdOrNum = c.req.param('movie_id_or_num');
-  
-  // 如果是数字ID,需要先查询获取uniqueid_num
-  if (!isNaN(parseInt(movieIdOrNum, 10))) {
-    const dbRow = await c.env.DB_MOVIES.prepare("SELECT uniqueid_num FROM movies WHERE id = ?")
-      .bind(parseInt(movieIdOrNum, 10))
-      .first<{uniqueid_num: string}>();
-    
-    if (dbRow && dbRow.uniqueid_num) {
-      // 重定向到使用uniqueid_num的URL
-      return c.redirect(`/api_movies/images/poster/${dbRow.uniqueid_num}`);
-    }
-    return c.text("Poster not found", 404);
-  }
-  
-  // 使用uniqueid_num直接构建R2路径
-  // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
-  const prefix = movieIdOrNum.split('-')[0];
-  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/');
-  
-  // CORRECTED: Fixed console.log syntax
-  console.log(`Attempting to access R2 key: ${r2Key} for movieIdOrNum: ${movieIdOrNum}`);
-  
-  return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
-});
-// --- MODIFIED END: POSTER IMAGE LOGIC ---
+movieApiApp.get('/images/poster/:movie_id_or_num{.+}', (c) => serveMovieImage(c, 'poster'));
 
-
-// --- MODIFIED START: FANART IMAGE LOGIC ---
 // GET /api_movies/images/fanart/:movie_id_or_num
-movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => { // CORRECTED: `moviewApiApp` -> `movieApiApp`
-  const movieIdOrNum = c.req.param('movie_id_or_num');
-  
-  // 如果是数字ID,需要先查询获取uniqueid_num
-  if (!isNaN(parseInt(movieIdOrNum, 10))) {
-    const dbRow = await c.env.DB_MOVIES.prepare("SELECT uniqueid_num FROM movies WHERE id = ?")
-      .bind(parseInt(movieIdOrNum, 10))
-      .first<{uniqueid_num: string}>();
-    
-    if (dbRow && dbRow.uniqueid_num) {
-      // 重定向到使用uniqueid_num的URL
-      return c.redirect(`/api_movies/images/fanart/${dbRow.uniqueid_num}`);
-    }
-    return c.text("Fanart not found", 404);
-  }
-  
-  // 使用uniqueid_num直接构建R2路径
-  // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
-  const prefix = movieIdOrNum.split('-')[0];
-  const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_fanart.avif`.replace(/\/\//g, '/');
+movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', (c) => serveMovieImage(c, 'fanart'));
 
-  // CORRECTED: Fixed console.log syntax
-  console.log(`Attempting to access R2 key: ${r2Key} for movieIdOrNum: ${movieIdOrNum}`);
-  
-  return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
-});
-// --- MODIFIED END: FANART IMAGE LOGIC ---
+// --- MODIFIED & REFACTORED END: IMAGE LOGIC ---
 
 
 // GET /api_movies/images/actor_thumb/:actor_name
-// 注意: 此部分未修改,因为它从 actors_info 表获取数据,可能使用不同的路径结构.
-// 如果也需要修改,请参照上面的模式进行.
 movieApiApp.get('/images/actor_thumb/:actor_name{.+}', async (c) => {
     const actorName = c.req.param('actor_name');
     const dbRow: { thumb_path: string } | null = await c.env.DB_MOVIES.prepare("SELECT thumb_path FROM actors_info WHERE name = ?")
@@ -391,9 +383,6 @@ movieApiApp.get('/series', async (c) => {
 
     }
     query += " ORDER BY premiered DESC";
-    // NOTE: The original code had poster_file_path and fanart_file_path here. 
-    // Since these are no longer single fields, I've removed them from this SELECT.
-    // The image URLs are constructed with the movie ID, which is correct and does not need to change.
     const movieRowsResult = await c.env.DB_MOVIES.prepare(query).bind(...params).all<Movie>();
     const movieRows = movieRowsResult.results || [];
 
@@ -410,8 +399,6 @@ movieApiApp.get('/series', async (c) => {
         const movieGenres = parseJsonField<string>(movie.genres);
         movieGenres.forEach(g => seriesMap[name].Genres.add(g));
 
-        // This logic remains correct. It builds a URL pointing to our API endpoint.
-        // The API endpoint itself now knows how to resolve this ID into the correct file path.
         if (!seriesMap[name].PrimaryImageTag && movie.id) {
             seriesMap[name].PrimaryImageTag = `${c.req.url.origin}/api_movies/images/poster/${movie.id}`;
         }
