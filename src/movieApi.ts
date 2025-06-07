@@ -160,6 +160,7 @@ moviewApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
   // 使用uniqueid_num直接构建R2路径
   // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
   const prefix = movieIdOrNum.split('-')[0];
+  console.log(`Attempting to access R2 key: ${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/')} for movieIdOrNum: ${movieIdOrNum}`);
   const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/');
   
   return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
@@ -188,6 +189,7 @@ moviewApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
   // 使用uniqueid_num直接构建R2路径
   // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
   const prefix = movieIdOrNum.split('-')[0];
+  console.log(`Attempting to access R2 key: ${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_fanart.avif`.replace(/\/\//g, '/')} for movieIdOrNum: ${movieIdOrNum}`);
   const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_fanart.avif`.replace(/\/\//g, '/');
   
   return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
