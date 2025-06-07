@@ -196,7 +196,6 @@ movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', (c) => serveMovieImage(c,
 
 
 // GET /api_movies/images/actor_thumb/:actor_name
-// GET /api_movies/images/actor_thumb/:actor_name
 movieApiApp.get('/images/actor_thumb/:actor_name{.+}', async (c) => {
     const actorName = c.req.param('actor_name'); // 获取演员名字
 
@@ -208,7 +207,7 @@ movieApiApp.get('/images/actor_thumb/:actor_name{.+}', async (c) => {
 
     // 2. 构建 R2 存储桶中的完整 Key
     // 根据你的描述，路径是：<BASE_PREFIX>movies/actors_photo/<actor_name>.avif
-    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}movies/actors_photo/${fileName}`.replace(/\/\//g, '/');
+    const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}movies/actors_photo/演员图片/${fileName}`.replace(/\/\//g, '/');
 
     console.log(`Attempting to access R2 actor image key: ${r2Key} for actor: ${actorName}`);
 
