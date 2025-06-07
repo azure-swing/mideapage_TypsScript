@@ -7,7 +7,7 @@ import { serveFileFromR2 } from './r2Utils';
 export const movieApiApp = new Hono<{ Bindings: Env }>();
 
 // GET /api_movies/items
-movieApiApp.get('/items', async (c) => {
+movieApiApp。get('/items', async (c) => {
   const query = c.req.query();
   const startIndex = parseInt(query['StartIndex'] || '0', 10);
   const limit = parseInt(query['Limit'] || '100', 10);
@@ -55,14 +55,14 @@ movieApiApp.get('/items', async (c) => {
 });
 
 // GET /api_movies/items/:item_id_or_num
-movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
+movieApiApp。get('/items/:item_id_or_num{.+}', async (c) => {
   const itemIdOrNum = c.req.param('item_id_or_num');
   let movieRaw: any;
 
   if (!isNaN(parseInt(itemIdOrNum, 10))) {
     movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
   } else {
-    movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
+    movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE uniqueid_num = ?")。bind(itemIdOrNum).first();
   }
 
   if (!movieRaw) {
@@ -160,7 +160,7 @@ moviewApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
   // 使用uniqueid_num直接构建R2路径
   // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
   const prefix = movieIdOrNum.split('-')[0];
-  console.log(`Attempting to access R2 key: ${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/')} for movieIdOrNum: ${movieIdOrNum}`);
+  console.log(`Attempting to access R2 key: ${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/') for movieIdOrNum: ${movieIdOrNum}`);
   const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/');
   
   return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
