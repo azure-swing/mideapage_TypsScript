@@ -7,7 +7,7 @@ import { serveFileFromR2 } from './r2Utils';
 export const movieApiApp = new Hono<{ Bindings: Env }>();
 
 // GET /api_movies/items
-movieApiApp.get('/items'， async (c) => {
+movieApiApp.get('/items', async (c) => {
   const query = c.req.query();
   const startIndex = parseInt(query['StartIndex'] || '0', 10);
   const limit = parseInt(query['Limit'] || '100', 10);
@@ -55,7 +55,7 @@ movieApiApp.get('/items'， async (c) => {
 });
 
 // GET /api_movies/items/:item_id_or_num
-movieApiApp.get('/items/:item_id_or_num{.+}'， async (c) => {
+movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
   const itemIdOrNum = c.req.param('item_id_or_num');
   let movieRaw: any;
 
