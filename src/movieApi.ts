@@ -62,7 +62,7 @@ movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
   if (!isNaN(parseInt(itemIdOrNum, 10))) {
     movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE id = ?").bind(parseInt(itemIdOrNum, 10)).first();
   } else {
-    movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE uniqueid_num = ?")。bind(itemIdOrNum)。first();
+    movieRaw = await c.env.DB_MOVIES.prepare("SELECT * FROM movies WHERE uniqueid_num = ?").bind(itemIdOrNum).first();
   }
 
   if (!movieRaw) {
@@ -144,7 +144,7 @@ movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
 moviewApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
   const movieIdOrNum = c.req.param('movie_id_or_num');
   
-  // 如果是数字ID，需要先查询获取uniqueid_num
+  // 如果是数字ID,需要先查询获取uniqueid_num
   if (!isNaN(parseInt(movieIdOrNum, 10))) {
     const dbRow = await c.env.DB_MOVIES.prepare("SELECT uniqueid_num FROM movies WHERE id = ?")
       .bind(parseInt(movieIdOrNum, 10))
@@ -173,7 +173,7 @@ moviewApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
 moviewApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
   const movieIdOrNum = c.req.param('movie_id_or_num');
   
-  // 如果是数字ID，需要先查询获取uniqueid_num
+  // 如果是数字ID,需要先查询获取uniqueid_num
   if (!isNaN(parseInt(movieIdOrNum, 10))) {
     const dbRow = await c.env.DB_MOVIES.prepare("SELECT uniqueid_num FROM movies WHERE id = ?")
       .bind(parseInt(movieIdOrNum, 10))
@@ -198,8 +198,8 @@ moviewApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
 
 
 // GET /api_movies/images/actor_thumb/:actor_name
-// 注意: 此部分未修改，因为它从 actors_info 表获取数据，可能使用不同的路径结构。
-// 如果也需要修改，请参照上面的模式进行。
+// 注意: 此部分未修改,因为它从 actors_info 表获取数据,可能使用不同的路径结构.
+// 如果也需要修改,请参照上面的模式进行.
 movieApiApp.get('/images/actor_thumb/:actor_name{.+}', async (c) => {
     const actorName = c.req.param('actor_name');
     const dbRow: { thumb_path: string } | null = await c.env.DB_MOVIES.prepare("SELECT thumb_path FROM actors_info WHERE name = ?")
