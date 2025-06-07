@@ -74,7 +74,7 @@ movieApiApp.get('/items/:item_id_or_num{.+}', async (c) => {
 
 
 // POST /api_movies/items/:item_id_or_num/like
-movieApiApp.post('/items/:item_id_or_num{.+}', async (c) => {
+movieApiApp.post('/items/:item_id_or_num/like', async (c) => { // Corrected endpoint to be more RESTful
     const itemIdOrNum = c.req.param('item_id_or_num');
     const clientIp = getClientIp(c);
     let movieId: number | null = null;
@@ -107,7 +107,7 @@ movieApiApp.post('/items/:item_id_or_num{.+}', async (c) => {
 });
 
 // DELETE /api_movies/items/:item_id_or_num/like
-movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
+movieApiApp.delete('/items/:item_id_or_num/like', async (c) => { // Corrected endpoint to be more RESTful
     const itemIdOrNum = c.req.param('item_id_or_num');
     const clientIp = getClientIp(c);
     let movieId: number | null = null;
@@ -141,7 +141,7 @@ movieApiApp.delete('/items/:item_id_or_num{.+}', async (c) => {
 
 // --- MODIFIED START: POSTER IMAGE LOGIC ---
 // GET /api_movies/images/poster/:movie_id_or_num
-moviewApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
+movieApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => { // CORRECTED: `moviewApiApp` -> `movieApiApp`
   const movieIdOrNum = c.req.param('movie_id_or_num');
   
   // 如果是数字ID,需要先查询获取uniqueid_num
@@ -160,8 +160,10 @@ moviewApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
   // 使用uniqueid_num直接构建R2路径
   // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
   const prefix = movieIdOrNum.split('-')[0];
-  console.log(`Attempting to access R2 key: ${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/') for movieIdOrNum: ${movieIdOrNum}`);
   const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_poster.avif`.replace(/\/\//g, '/');
+  
+  // CORRECTED: Fixed console.log syntax
+  console.log(`Attempting to access R2 key: ${r2Key} for movieIdOrNum: ${movieIdOrNum}`);
   
   return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
 });
@@ -170,7 +172,7 @@ moviewApiApp.get('/images/poster/:movie_id_or_num{.+}', async (c) => {
 
 // --- MODIFIED START: FANART IMAGE LOGIC ---
 // GET /api_movies/images/fanart/:movie_id_or_num
-moviewApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
+movieApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => { // CORRECTED: `moviewApiApp` -> `movieApiApp`
   const movieIdOrNum = c.req.param('movie_id_or_num');
   
   // 如果是数字ID,需要先查询获取uniqueid_num
@@ -189,8 +191,10 @@ moviewApiApp.get('/images/fanart/:movie_id_or_num{.+}', async (c) => {
   // 使用uniqueid_num直接构建R2路径
   // 从uniqueid_num中提取前缀（如MIDV-800中的MIDV）
   const prefix = movieIdOrNum.split('-')[0];
-  console.log(`Attempting to access R2 key: ${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_fanart.avif`.replace(/\/\//g, '/')} for movieIdOrNum: ${movieIdOrNum}`);
   const r2Key = `${c.env.MOVIE_ASSETS_R2_BASE_PREFIX}/movies/movies_poster/${prefix}/${movieIdOrNum}_fanart.avif`.replace(/\/\//g, '/');
+
+  // CORRECTED: Fixed console.log syntax
+  console.log(`Attempting to access R2 key: ${r2Key} for movieIdOrNum: ${movieIdOrNum}`);
   
   return serveFileFromR2(c, c.env.MOVIES_ASSETS_BUCKET, r2Key);
 });
